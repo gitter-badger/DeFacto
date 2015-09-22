@@ -16,12 +16,20 @@ FIELDS_INPUT = titleText,text
 ; the set of indexed (output) fields
 FIELDS_OUTPUT = id,titleText
 
+wiki_service_en_url = http://139.18.2.164:8080/solr/wiki_en/
+wiki_service_fr_url = http://139.18.2.164:8080/solr/wiki_fr/
+wiki_service_de_url = http://139.18.2.164:8080/solr/wiki_de/
+wiki_fields_in = titleText,text
+wiki_fields_out = id,titleText
+
 [crawl]
 ; the bing api key get your own at: 
 ; BING_API_KEY = vm+K+uxrwn3oRap0Ou87KePKjGzH3gLGFM1vMw776wc=
 BING_API_KEY = grgZ1JV8G6y/zbIVA9DChAuOuUIjdcsHoxhTkz2MXKQ
 ; number of search results return be the search engine
 NUMBER_OF_SEARCH_RESULTS = 20
+; number of search results returned by the search engine
+NUMBER_OF_SEARCH_RESULTS_LC = 20
 ; thredas
 NUMBER_OF_SEARCH_RESULTS_THREADS = 40
 ; crawl thread gets terminated after this time
