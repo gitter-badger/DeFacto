@@ -7,6 +7,7 @@ import java.io.InputStreamReader;
 import java.net.*;
 import java.util.*;
 import java.util.Map.Entry;
+import java.util.concurrent.ExecutionException;
 
 import com.hp.hpl.jena.rdf.model.*;
 import org.aksw.defacto.util.LabeledTriple;
@@ -42,15 +43,15 @@ import com.hp.hpl.jena.vocabulary.RDFS;
 public class DataWebResultFinder {
 
 	private static Logger logger = Logger.getLogger(DataWebResultFinder.class);
+	private static HttpSolrServer server = new HttpSolrServer("http://localhost:8123/solr/ld_sources");
 	private int numberOfTriples = 0;
 	private int numberOfRelevantTriples = 0;
 	Set<String> relevantTriples = new TreeSet<String>();
-	Set<String> distinctResources = new TreeSet<String>();
+	//Set<String> distinctResources = new TreeSet<String>();
 	private int labelCalls = 0;
 	private SameAsService service;
 	private static ArrayList<String> blackList = new ArrayList<>();
 	private int maximumEquivalentURIs = 10;
-
 	private static Set<String> notAllowedProperties = new HashSet<String>();
 	static {
 		notAllowedProperties.add("http://www.w3.org/2002/07/owl#sameAs");
@@ -62,12 +63,9 @@ public class DataWebResultFinder {
 
 		blackList.add("http://www.econbiz.de/");
 
-		try {
-
+		//try {
 			//saveDocument();
 			//queryDocument();
-
-
 
 			//Model read = ModelFactory.createDefaultModel().read("http://www.globo.com");
 			//StmtIterator si;
@@ -82,14 +80,10 @@ public class DataWebResultFinder {
 			//	System.out.println(o.asResource().getURI());
 			//}
 
-		}
-		catch(Exception e) {
-			System.out.print(e.toString());
-		}
-
-
-
-
+		//}
+		//catch(Exception e) {
+		//	System.out.print(e.toString());
+		//}
 
 		DataWebResultFinder finder = new DataWebResultFinder();
 
@@ -114,7 +108,8 @@ public class DataWebResultFinder {
 
 	}
 
-	public Map<LabeledTriple, Double> findSimilarTriples(LabeledTriple inputTriple, double threshold) throws SameAsServiceException {
+	public Map<LabeledTriple, Double> findSimilarTriples(LabeledTriple inputTriple, double threshold)
+			throws SameAsServiceException {
 
 		service = DefaultSameAsServiceFactory.getSingletonInstance();
 		service.setCache(new InMemoryCache());
@@ -125,40 +120,25 @@ public class DataWebResultFinder {
 
 		long startTime = System.currentTimeMillis();
 		// retrieve Linked Data from all sources
-		// List<LabeledTriple> ltriples = new LinkedList<LabeledTriple>();
-		// switched to set, because for some reason we need to filter duplicates
-		// for hash URIs
 		Set<LabeledTriple> ltriples = new TreeSet<>();
-
 		//System.out.println("total: " + equivalence.getAmount());
 		int i = 0;
 		outerloop:
 		for (URI uri : equivalence) {
 			if (i==maximumEquivalentURIs){
 				System.out.println("Breaking");
-				break outerloop;
-			}
-
+				break outerloop;}
 			if (!blackList.contains(uri.toString())){
 				ltriples.addAll(readLinkedDataLabeled(uri.toString()));
 				i++;
 			}
-			//if (!uri.toString().startsWith("http://www.econbiz.de/")) // not
-																		// able
-																		// to
-																		// provide
-																		// proper
-																		// rdf
-				//ltriples.addAll(readLinkedDataLabeled(uri.toString()));
-				//i++;
 		}
-
 		long duration = System.currentTimeMillis() - startTime;
 
 		System.out.println("number of all triples: " + numberOfTriples);
 		System.out.println("number of relevant triples: " + numberOfRelevantTriples);
 		System.out.println("number of distinct relevant triples: " + relevantTriples.size());
-		System.out.println("number of distinct resources: " + distinctResources.size());
+		//System.out.println("number of distinct resources: " + distinctResources.size());
 		System.out.println("Linked Data label calls: " + labelCalls);
 		System.out.println("time spend for retrieving resources: " + duration + " ms");
 
@@ -171,13 +151,76 @@ public class DataWebResultFinder {
 		return simTriples;
 	}
 
+	private boolean isRelevant(Statement st, String uri){
+
+		if (st.getSubject().isURIResource()
+				&& st.getObject().isURIResource()
+				&& st.getSubject().getURI().toString().equals(uri)
+				&& !st.getPredicate().getURI().startsWith(RDF.getURI())
+				&& !st.getPredicate().getURI().startsWith(RDFS.getURI())
+				&& !st.getPredicate().getURI().startsWith(OWL.getURI())
+				&& !st.getPredicate().getURI().startsWith("http://www.w3.org/2004/02/skos/core")
+				&& !st.getPredicate().getURI().startsWith("http://www.w3.org/2008/05/skos-xl")
+				&& !st.getPredicate().getURI().startsWith("http://purl.org/dc/terms/subject")
+				&& !st.getPredicate().getURI().startsWith("http://www.geonames.org/ontology#wikipediaArticle")
+				&& !st.getPredicate().getURI().startsWith("http://dbpedia.org/ontology/wikiPageExternalLink")
+				) {
+					return true;
+				}
+		else{
+			return false;
+		}
+	}
+
+	private boolean indexRelevantTriples(String s, String p, String o) throws Exception{
+
+		SolrInputDocument doc = new SolrInputDocument();
+		doc.addField("s", s);
+		doc.addField("p", p);
+		doc.addField("o", o);
+
+		server.add(doc);
+		server.commit();
+		return true;
+
+	}
+
+	private boolean addRelatedURIs(Model m, String uri) throws Exception{
+
+		ArrayList<String> relatedURIs = new ArrayList<>();
+
+		try{
+			StmtIterator it = m.listStatements();
+            while (it.hasNext()) {
+				Statement st = it.next();
+                indexRelevantTriples(st.getSubject().getURI().toString(), st.getObject().asNode().getURI().toString(), st.getPredicate().getURI().toString());
+
+				//currently, we are only looking at object properties, so we assume only object properties can be similar;
+				if (isRelevant(st, uri)) {
+					numberOfRelevantTriples++;
+					relatedURIs.add(st.getPredicate().getURI());
+					relatedURIs.add(st.getObject().asResource().getURI());
+				}
+			}
+
+            if (!relatedURIs.isEmpty()) {
+                updateDocumentAddingRelatedURIs(uri.hashCode(), relatedURIs);
+            }
+			return true;
+
+		}catch (Exception e){
+			throw new Exception(e);
+		}
+	}
+	private List<LabeledTriple> getRelatedURIs(String uri){
+
+	}
 	public List<LabeledTriple> readLinkedDataLabeled(String uri) {
+
 		logger.info("Reading all statements from " + uri + ".");
 		String subjectLabel = getURILabel(uri);
-
-		System.out.println("subject label = " + subjectLabel);
-
-
+		String predicateLabel;
+		String objectLabel;
 
 		List<LabeledTriple> ltriples = new LinkedList<>();
 		// retrieve all statements from the URI
@@ -194,43 +237,20 @@ public class DataWebResultFinder {
 			Statement st = it.next();
 			// // currently, we are only looking at object properties, so we
 			// // assume only object properties can be similar;
-			if (st.getSubject().isURIResource()
-					&& st.getObject().isURIResource()
-					&& st.getSubject().getURI().toString().equals(uri)
-					&& !st.getPredicate().getURI().startsWith(RDF.getURI())
-					&& !st.getPredicate().getURI().startsWith(RDFS.getURI())
-					&& !st.getPredicate().getURI().startsWith(OWL.getURI())
-					&& !st.getPredicate().getURI().startsWith("http://www.w3.org/2004/02/skos/core")
-					&& !st.getPredicate().getURI().startsWith("http://www.w3.org/2008/05/skos-xl")
-					&& !st.getPredicate().getURI().startsWith("http://purl.org/dc/terms/subject")
-					&& !st.getPredicate().getURI().startsWith("http://www.geonames.org/ontology#wikipediaArticle")
-					&& !st.getPredicate().getURI().startsWith("http://dbpedia.org/ontology/wikiPageExternalLink")
-			// !st.getObject().asResource().getURI().startsWith("http://www.econbiz.de/")
-			// &&
-			// !st.getSubject().getURI().startsWith("http://www.econbiz.de/"))
-			) {
+			if (isRelevant(st, uri)) {
 				i++;
-				System.out.println(st.getSubject().getNameSpace() + "+++"
-						+ st.getPredicate().toString() + "+++"
-						+ st.getObject().toString());
+				System.out.println(st.getSubject().getNameSpace() + "+++" + st.getPredicate().toString() + "+++" + st.getObject().toString());
 				// quick hack
-				boolean test = relevantTriples.add(st.getSubject()
-						.getNameSpace()
-						+ "+++"
-						+ st.getPredicate().toString()
-						+ "+++" + st.getObject().toString());
+				boolean test = relevantTriples.add(st.getSubject().getNameSpace() + "+++" + st.getPredicate().toString() + "+++" + st.getObject().toString());
 				if (test) {
 					distinctResources.add(st.getSubject().getURI().toString());
 					distinctResources.add(st.getObject().asNode().getURI().toString());
 					distinctResources.add(st.getPredicate().getURI().toString());
 				}
 				numberOfRelevantTriples++;
-				// System.out.println(st);
-				String predicateLabel = getURILabel(st.getPredicate().getURI());
-				System.out.println("predicate label = " + predicateLabel);
 
-				String objectLabel = getURILabel(st.getObject().asResource().getURI());
-				System.out.println("object label = " + objectLabel);
+				predicateLabel = getURILabel(st.getPredicate().getURI());
+				objectLabel    = getURILabel(st.getObject().asResource().getURI());
 
 				LabeledTriple lt = new LabeledTriple(
 						st.getSubject().getURI(), subjectLabel,
@@ -243,45 +263,45 @@ public class DataWebResultFinder {
 		return ltriples;
 	}
 
-	// retrieves the label from a resource via Linked Data (TODO: that should be
-	// cached,
-	// otherwise we end up doing very many Linked Data calls)
+	// retrieves the label from a resource via Linked Data
 	public String getURILabel(String uri) {
 
+		String label = "";
 		logger.info("Getting label of " + uri + ".");
 
-		String retorno = "";
+		try {
+			SolrDocument d = getDocumentByID(getHash(uri));
+			if (d != null) {
+				labelCalls++;
+				label = d.getFieldValue("label").toString();
+			} else {
+				HolderURI<String> ret = new HolderURI<>("");
+				Model m = readLinkedData(uri, ret);
+				if (m == null) {
+					// use local name if URI cannot be dereferenced
+					label = ModelFactory.createDefaultModel().createResource(uri).getLocalName();
+				}else {
+					Property prefLabel = m.createProperty("http://www.w3.org/2004/02/skos/core#prefLabel");
+					Statement st = m.getResource(uri).getProperty(prefLabel);
+					if (st != null) {
+						label = st.getObject().toString();
+					}else{
+						st = m.getResource(uri).getProperty(RDFS.label);
+						if (st != null) {
+							label = st.getObject().toString();
+						} else {
+							// the fallback is to create the label from the URI name
+							label = m.createResource(uri).getLocalName();
+						}
+					}
+				}
+				saveDocument(getHash(uri), label);
+			}
+		}catch (Exception e){
+			logger.info("error: " + e.toString());
+		}
 
-		// check whether we already have the label in our cache
-		String lc = labelCache.get(uri);
-		if (lc != null) {
-			logger.info("Cache hit.");
-			return lc;
-		}
-		labelCalls++;
-
-		HolderURI<String> ret = new HolderURI<>("");
-		Model m = readLinkedData(uri, ret);
-		if (m == null) {
-			// use local name if URI cannot be dereferenced
-			retorno = ModelFactory.createDefaultModel().createResource(uri).getLocalName();
-		}
-		Property prefLabel = m.createProperty("http://www.w3.org/2004/02/skos/core#prefLabel");
-		Statement st = m.getResource(uri).getProperty(prefLabel);
-		if (st != null) {
-			retorno =  st.getObject().toString();
-		}
-		st = m.getResource(uri).getProperty(RDFS.label);
-		// System.out.println(st);
-		if (st != null) {
-			retorno =  st.getObject().toString();
-		} else {
-			// the fallback is to create the label from the URI name
-			retorno =  m.createResource(uri).getLocalName();
-		}
-
-		labelCache.put(uri, retorno);
-		return retorno;
+		return label;
 	}
 
 	// TODO: because we get all kinds of errors in Linked Data, this method
@@ -388,7 +408,6 @@ public class DataWebResultFinder {
 				triple2.getObjectLabel());
 		return (sVal + pVal + oVal) / 3;
 	}
-
 	private int getHash(String value){
 		int hash = 7;
 		for (int i = 0; i < value.length(); i++) {
@@ -397,7 +416,6 @@ public class DataWebResultFinder {
 		return hash;
 		//return value.hashCode();
 	}
-	
     private String inputStreamToString(InputStream in) {
 	    BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(in));
 	    StringBuilder stringBuilder = new StringBuilder();
@@ -415,63 +433,71 @@ public class DataWebResultFinder {
 	    return stringBuilder.toString();
     }
 
-	private static boolean saveDocument(int id, String content) throws IOException, SolrServerException {
-		HttpSolrServer server = new HttpSolrServer("http://localhost:8123/solr/ld_sources");
-		//for(int i=0;i<1000;++i) {
-			SolrInputDocument doc = new SolrInputDocument();
-			//doc.addField("id", "book-" + i);
-		doc.addField("id", id);
-			//doc.addField("text", "sakjdhaskjdhjkasdas " + i);
-		doc.addField("text", content);
-			server.add(doc);
-			//if(i%100==0)
-			//	server.commit();  // periodically flush
-		//}
-		server.commit();
-		return true;
-	}
-	private static SolrDocument getDocumentByID(int id) throws MalformedURLException, SolrServerException {
-		HttpSolrServer solr = new HttpSolrServer("http://localhost:8123/solr/ld_sources");
+	private static boolean updateDocumentAddingRelatedURIs(long uriHash, ArrayList<String> relatedURIs)  {
 
+		if (relatedURIs == null || relatedURIs.isEmpty()){
+			return false;
+		}
+		try{
+			SolrInputDocument doc = new SolrInputDocument();
+			Map<String,ArrayList<String>> relatedURIUpdate = new HashMap<>();
+			relatedURIUpdate.put("add", relatedURIs);
+			doc.addField("hash", uriHash);
+			doc.addField("relatedURIs", relatedURIUpdate);
+			server.add(doc);
+			server.commit();
+			return true;
+		}catch (Exception e){
+			logger.error("Error: " + e.toString());
+			return false;
+		}
+
+	}
+
+	private static boolean saveDocument(long hash, String uri, String urilabel, ArrayList<String> relatedURIs) throws IOException, SolrServerException {
+
+		if (!contains(hash)){
+
+			SolrInputDocument doc = new SolrInputDocument();
+			doc.addField("uri", uri);
+			doc.addField("hash", hash);
+			doc.addField("label", urilabel);
+			doc.addField("relatedURIs", relatedURIs);
+
+			server.add(doc);
+			server.commit();
+			return true;
+		}
+
+	}
+	private static SolrDocument getDocumentByID(long hash) throws MalformedURLException, SolrServerException {
 		SolrQuery query = new SolrQuery();
-		query.setQuery("id:" + id);
-		query.setFields("id","text");
+		query.setQuery("hash:" + hash);
+		query.setFields("hash","label");
 		query.setStart(0);
 		query.set("defType", "edismax");
 
-		QueryResponse response = solr.query(query);
+		QueryResponse response = server.query(query);
 		SolrDocumentList results = response.getResults();
 
 		if (results != null && results.size() > 0){
 			return results.get(0);
-		}else
-		{
+		} else {
 			return null;
 		}
-
 	}
-	private static boolean contains(String id) throws MalformedURLException, SolrServerException {
-
-		HttpSolrServer solr = new HttpSolrServer("http://localhost:8123/solr/ld_sources");
+	private static boolean contains(long hash) throws MalformedURLException, SolrServerException {
 
 		SolrQuery query = new SolrQuery();
-		query.setQuery("id:" + id);
-		query.setFields("id","text");
+		query.setQuery("hash:" + hash);
+		query.setFields("uri","hash");
 		query.setStart(0);
 		query.set("defType", "edismax");
 
-		QueryResponse response = solr.query(query);
+		QueryResponse response = server.query(query);
 		SolrDocumentList results = response.getResults();
 
 		return results == null ? false : results.size() > 0 ? true : false;
 
-
-
-		//for (int i = 0; i < results.size(); ++i) {
-		//	System.out.println(results.get(i));
-		//}
-
-
 	}
-
 }
