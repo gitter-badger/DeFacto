@@ -16,6 +16,7 @@ import org.apache.solr.client.solrj.SolrQuery;
 import org.apache.solr.client.solrj.SolrServerException;
 import org.apache.solr.client.solrj.impl.HttpSolrServer;
 import org.apache.solr.client.solrj.response.QueryResponse;
+import org.apache.solr.client.solrj.response.UpdateResponse;
 import org.apache.solr.common.SolrDocument;
 import org.apache.solr.common.SolrDocumentList;
 import org.apache.solr.common.SolrInputDocument;
@@ -37,120 +38,84 @@ import com.hp.hpl.jena.vocabulary.RDFS;
  * Currently, this is backed by sameAs.org
  * 
  * @author Jens Lehmann
+ * @author Diego Esteves
  * TODO make  this a feature and move it to the correct package
  * TODO delete InformationFinder package
  */
 public class DataWebResultFinder {
 
 	private static Logger logger = Logger.getLogger(DataWebResultFinder.class);
-	private static HttpSolrServer server = new HttpSolrServer("http://localhost:8123/solr/ld_sources");
-	private int numberOfTriples = 0;
+	private static HttpSolrServer server_triples = new HttpSolrServer("http://localhost:8123/solr/ld_triples");
+    private static HttpSolrServer server_uris = new HttpSolrServer("http://localhost:8123/solr/ld_uris");
+    private static ArrayList<String> blackList = new ArrayList<>();
+    private static Set<String> notAllowedProperties = new HashSet<>();
+    private int numberOfTriples = 0;
 	private int numberOfRelevantTriples = 0;
-	Set<String> relevantTriples = new TreeSet<String>();
-	//Set<String> distinctResources = new TreeSet<String>();
 	private int labelCalls = 0;
+    Set<String> relevantTriples = new TreeSet<String>();
 	private SameAsService service;
-	private static ArrayList<String> blackList = new ArrayList<>();
-	private int maximumEquivalentURIs = 10;
-	private static Set<String> notAllowedProperties = new HashSet<String>();
 	static {
 		notAllowedProperties.add("http://www.w3.org/2002/07/owl#sameAs");
 		notAllowedProperties.add("http://www.w3.org/1999/02/22-rdf-syntax-ns#type");
 	}
-	private Map<String, String> labelCache = new TreeMap<String, String>();
 
 	public static void main(String args[]) throws SameAsServiceException {
 
 		blackList.add("http://www.econbiz.de/");
 
-		//try {
-			//saveDocument();
-			//queryDocument();
-
-			//Model read = ModelFactory.createDefaultModel().read("http://www.globo.com");
-			//StmtIterator si;
-			//si = read.listStatements();
-			//while (si.hasNext()) {
-			//	Statement s=si.nextStatement();
-			//	Resource r=s.getSubject();
-			//	Property p=s.getPredicate();
-			//	RDFNode o=s.getObject();
-			//	System.out.println(r.getURI());
-			//	System.out.println(p.getURI());
-			//	System.out.println(o.asResource().getURI());
-			//}
-
-		//}
-		//catch(Exception e) {
-		//	System.out.print(e.toString());
-		//}
-
 		DataWebResultFinder finder = new DataWebResultFinder();
 
-		// test triple
-		LabeledTriple ltriple = new LabeledTriple(
-				"http://dbpedia.org/resource/Berlin", "Berlin",
+        LabeledTriple ltriple = new LabeledTriple("http://dbpedia.org/resource/Berlin", "Berlin",
 				"http://dbpedia.org/ontology/leader", "leader",
 				"http://dbpedia.org/resource/Klaus_Wowereit", "Klaus Wowereit");
 
-		Map<LabeledTriple, Double> similarTriples = finder.findSimilarTriples(ltriple, 0.0);
-
-		// Ordering<LabeledTriple> valueComparator =
-		// Ordering.natural().onResultOf(Functions.forMap(similarTriples));
-		// Map<LabeledTriple,Double> sortedMap =
-		// ImmutableSortedMap.copyOf(similarTriples, valueComparator);
+		Map<LabeledTriple, Double> similarTriples = finder.findSimilarTriples(ltriple, 0.0, 10);
 
 		for (Entry<LabeledTriple, Double> entry : similarTriples.entrySet()) {
 			if (entry.getValue() > 0.0) {
-				System.out.println(entry.getValue() + " " + entry.getKey());
-			}
+				System.out.println(entry.getValue() + " " + entry.getKey());}
 		}
-
 	}
-
-	public Map<LabeledTriple, Double> findSimilarTriples(LabeledTriple inputTriple, double threshold)
-			throws SameAsServiceException {
+	public Map<LabeledTriple, Double> findSimilarTriples(LabeledTriple inputTriple, double threshold, int maximumEquivalentURIs) throws SameAsServiceException {
 
 		service = DefaultSameAsServiceFactory.getSingletonInstance();
 		service.setCache(new InMemoryCache());
 		String _uri = inputTriple.getSubjectURI();
 
 		Equivalence equivalence = service.getDuplicates(URI.create(_uri));
-		System.out.println( "Number of equivalent URIs for [" + _uri + "] : " + equivalence.getAmount());
+		System.out.println( ":: Number of equivalent URIs for [" + _uri + "] : " + equivalence.getAmount());
 
 		long startTime = System.currentTimeMillis();
-		// retrieve Linked Data from all sources
+
 		Set<LabeledTriple> ltriples = new TreeSet<>();
-		//System.out.println("total: " + equivalence.getAmount());
 		int i = 0;
 		outerloop:
 		for (URI uri : equivalence) {
 			if (i==maximumEquivalentURIs){
-				System.out.println("Breaking");
+				System.out.println(" -> limit has been reached, stopping the equivalent URIs searching");
 				break outerloop;}
 			if (!blackList.contains(uri.toString())){
-				ltriples.addAll(readLinkedDataLabeled(uri.toString()));
+				ltriples.addAll(getLinkedDataURIs(uri.toString()));
 				i++;
 			}
 		}
 		long duration = System.currentTimeMillis() - startTime;
 
-		System.out.println("number of all triples: " + numberOfTriples);
-		System.out.println("number of relevant triples: " + numberOfRelevantTriples);
-		System.out.println("number of distinct relevant triples: " + relevantTriples.size());
-		//System.out.println("number of distinct resources: " + distinctResources.size());
-		System.out.println("Linked Data label calls: " + labelCalls);
-		System.out.println("time spend for retrieving resources: " + duration + " ms");
+		System.out.println(":: Number of all triples: " + numberOfTriples);
+		System.out.println(":: Number of relevant triples: " + numberOfRelevantTriples);
+		System.out.println(":: Number of distinct relevant triples: " + relevantTriples.size());
+		//System.out.println(":: Number of distinct resources: " + distinctResources.size());
+		System.out.println(":: Linked Data label calls: " + labelCalls);
+		System.out.println(":: Time spend for retrieving resources: " + duration + " ms");
 
 		// score all triples, which we have obtained
-		System.out.println("starting scoring " + ltriples.size() + " triples...");
+		System.out.println(" -> starting scoring " + ltriples.size() + " triples...");
 		Map<LabeledTriple, Double> simTriples = new HashMap<>();
 		for (LabeledTriple t : ltriples) {
 			simTriples.put(t, score(inputTriple, t));
 		}
 		return simTriples;
 	}
-
 	private boolean isRelevant(Statement st, String uri){
 
 		if (st.getSubject().isURIResource()
@@ -171,96 +136,145 @@ public class DataWebResultFinder {
 			return false;
 		}
 	}
+	private static Long addTripleToCache(long shash, long phash, long ohash) throws Exception{
 
-	private boolean indexRelevantTriples(String s, String p, String o) throws Exception{
+        SolrInputDocument doc = new SolrInputDocument();
+        UpdateResponse response;
+        doc.addField("s", shash);
+        doc.addField("p", phash);
+        doc.addField("o", ohash);
 
-		SolrInputDocument doc = new SolrInputDocument();
-		doc.addField("s", s);
-		doc.addField("p", p);
-		doc.addField("o", o);
+        //check whether the response returns the ID somewhere...
+        response = server_triples.add(doc);
+        server_triples.commit();
 
-		server.add(doc);
-		server.commit();
-		return true;
+        //otherwise I would have to stupidly query it :-(
+        SolrQuery query = new SolrQuery();
+        query.setQuery("s:" + shash + " AND p:" + phash + " AND o:" + ohash);
+        query.setFields("id");
+        query.setStart(0);
+        query.set("defType", "edismax");
+
+        QueryResponse response2 = server_triples.query(query);
+        SolrDocumentList results = response2.getResults();
+
+        if (results != null && results.size() > 0){
+            return (Long) results.get(0).getFieldValue("id");
+        } else {
+            throw new Exception("error on getting the ID for the operation");
+        }
 
 	}
+	private Set<LabeledTriple> addTriplesToCache(Model m, String uri) throws Exception{
 
-	private boolean addRelatedURIs(Model m, String uri) throws Exception{
+        Set<LabeledTriple> addedTriples = new TreeSet<>();
+        String s,p,o,sl,pl,ol;
+        int i = 0;
+        ArrayList<String> relatedTripleURIs = new ArrayList<>();
 
-		ArrayList<String> relatedURIs = new ArrayList<>();
+        //adding master URI
+        String uril = getURILabel(uri);
+        if (addURIToCache(uri.hashCode(), uri, uril, null) == 0){
+            throw new Exception("error on adding URI to cache");
+        }
 
-		try{
-			StmtIterator it = m.listStatements();
-            while (it.hasNext()) {
-				Statement st = it.next();
-                indexRelevantTriples(st.getSubject().getURI().toString(), st.getObject().asNode().getURI().toString(), st.getPredicate().getURI().toString());
+        //reading related triples model
+        StmtIterator it = m.listStatements();
+        while (it.hasNext()) {
+            Statement st = it.next();
+            // // currently, we are only looking at object properties, so we
+            // // assume only object properties can be similar;
+            if (isRelevant(st, uri)) {
+                numberOfRelevantTriples++;
+                //System.out.println(st.getSubject().getNameSpace() + "+++" + st.getPredicate().toString() + "+++" + st.getObject().toString());
 
-				//currently, we are only looking at object properties, so we assume only object properties can be similar;
-				if (isRelevant(st, uri)) {
-					numberOfRelevantTriples++;
-					relatedURIs.add(st.getPredicate().getURI());
-					relatedURIs.add(st.getObject().asResource().getURI());
-				}
-			}
+                s = st.getSubject().getNameSpace();
+                p = st.getPredicate().toString();
+                o = st.getObject().toString();
+                sl = getURILabel(s);
+                pl = getURILabel(p);
+                ol = getURILabel(o);
 
-            if (!relatedURIs.isEmpty()) {
-                updateDocumentAddingRelatedURIs(uri.hashCode(), relatedURIs);
+                Long tripleOK = addTripleToCache(s.hashCode(), p.hashCode(), o.hashCode());
+                int sURIOK = addURIToCache(s.hashCode(), s, sl, null);
+                int pURIOK = addURIToCache(p.hashCode(), p, pl, null);
+                int oURIOK = addURIToCache(o.hashCode(), o, ol, null);
+                relatedTripleURIs.add(tripleOK.toString());
+
+                //0 = error , 1 = existing URI, 2 = success
+                if (tripleOK == 0 || sURIOK == 0 || pURIOK == 0  || oURIOK == 0){
+                    throw new Exception("failed to add URI to cache");
+                }else{
+                    addedTriples.add(new LabeledTriple(s,p,o,sl,pl,ol));
+                }
+
             }
-			return true;
+        }
 
-		}catch (Exception e){
-			throw new Exception(e);
-		}
+        //updating the cache including related triples URIs, then next time just query here
+        updateCacheAddingRelatedURIs(uri.hashCode(), relatedTripleURIs);
+
+        return addedTriples;
 	}
-	private List<LabeledTriple> getRelatedURIs(String uri){
+	private List<LabeledTriple> getCachedTriples(String uri){
+
+        //returns the related URIs cached on the server
+
+        Set<LabeledTriple> ltriples = new TreeSet<>();
+
+        try{
+            SolrDocument doc_cached = getDocumentByID(uri.hashCode());
+            if (doc_cached == null) {
+                throw new Exception("The URI [" + uri + "] is not cached!");
+            }else{
+
+                Collection<Object> relatedURIs = doc_cached.getFieldValues("relatedURIs");
+
+            }
+
+
+            if (!fail) {
+                ReadModelAndSaveDocument(uri, model);
+                doc_cached = getDocumentByID(uri.hashCode());
+                return doc_cached;
+            }
+            else{
+                return null;
+            }
+
+        }catch (Exception e){
+
+        }
 
 	}
-	public List<LabeledTriple> readLinkedDataLabeled(String uri) {
+	public List<LabeledTriple> getLinkedDataURIs(String uri) {
 
 		logger.info("Reading all statements from " + uri + ".");
-		String subjectLabel = getURILabel(uri);
-		String predicateLabel;
-		String objectLabel;
+		List<LabeledTriple> ltriples;
 
-		List<LabeledTriple> ltriples = new LinkedList<>();
-		// retrieve all statements from the URI
-		HolderURI<String> ret = new HolderURI<>("");
-		Model m = readLinkedData(uri, ret);
-		if (m == null) {
-			return ltriples;
-		}
-		numberOfTriples += m.size();
-		System.out.println("returned triples: " + m.size());
-		StmtIterator it = m.listStatements();
-		int i = 0;
-		while (it.hasNext()) {
-			Statement st = it.next();
-			// // currently, we are only looking at object properties, so we
-			// // assume only object properties can be similar;
-			if (isRelevant(st, uri)) {
-				i++;
-				System.out.println(st.getSubject().getNameSpace() + "+++" + st.getPredicate().toString() + "+++" + st.getObject().toString());
-				// quick hack
-				boolean test = relevantTriples.add(st.getSubject().getNameSpace() + "+++" + st.getPredicate().toString() + "+++" + st.getObject().toString());
-				if (test) {
-					distinctResources.add(st.getSubject().getURI().toString());
-					distinctResources.add(st.getObject().asNode().getURI().toString());
-					distinctResources.add(st.getPredicate().getURI().toString());
-				}
-				numberOfRelevantTriples++;
+        try{
+            //if uri exists in cache, then get from cache
+            ltriples = getCachedTriples(uri);
+            if (ltriples != null && ltriples.size() > 0){
+                return ltriples;
+            } else {      //else, extract uris and save into cache
+                Model m = extractLinkedDataFromURI(uri);
+                if (m == null) {
+                    return ltriples;
+                }
+                else{
+                    numberOfTriples += m.size();
+                    System.out.println("returned triples: " + m.size());
+                    ltriples = addTriplesToCache(m, uri);
+                    return ltriples;
+                }
+            }
 
-				predicateLabel = getURILabel(st.getPredicate().getURI());
-				objectLabel    = getURILabel(st.getObject().asResource().getURI());
+        }catch (Exception e){
+            logger.error("Error: " + e.toString());
+            return null;
+        }
 
-				LabeledTriple lt = new LabeledTriple(
-						st.getSubject().getURI(), subjectLabel,
-						st.getPredicate().getURI(), predicateLabel,
-						st.getObject().asResource().getURI(), objectLabel);
-				ltriples.add(lt);
-			}
-		}
-		System.out.println("possibly relevant triples: " + i);
-		return ltriples;
 	}
 
 	// retrieves the label from a resource via Linked Data
@@ -303,97 +317,43 @@ public class DataWebResultFinder {
 
 		return label;
 	}
+	public Model extractLinkedDataFromURI(String uri) {
 
-	// TODO: because we get all kinds of errors in Linked Data, this method
-	// needs to be extended
-	// quite a bit - maybe even an own project or using any23 as heavy-weight
-	// dependency
-	public Model readLinkedData(String uri, HolderURI<String> ret) {
-
-		boolean fail = false;
 		Model model = ModelFactory.createDefaultModel();
 		URL url;
 		InputStream in = null;
 
-		try{
-			SolrDocument d = getDocumentByID(getHash(uri));
-			if (d != null) {
-				ret.set(uri);
-				model.read(d.toString());
-			}
-			else{
-
-				/*
-				try {
-					URL url = new URL(uri);
-					HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-					connection.setRequestMethod("HEAD");
-					connection.connect();
-					String contentType = connection.getContentType();
-					System.out.println("the content type = " + contentType);
-				}
-				catch (Exception e){
-
-				}
-				*/
-
-				// replaced Jena by own implementation to have timeouts
-
-				try {
-					url = new URL(uri);
-					URLConnection conn = url.openConnection();
-					conn.setRequestProperty("Accept", "application/rdf+xml");
-					conn.setConnectTimeout(3000);
-					conn.setReadTimeout(5000);
-					in = conn.getInputStream();
-
-					try {
-						model.read(in, "RDF/XML");
-					} catch (Exception e) {
-						e.printStackTrace();
-						try {
-							URL url2 = new URL(uri);
-							URLConnection conn2 = url2.openConnection();
-							conn2.setRequestProperty("Accept", "text/n3");
-							conn2.setConnectTimeout(3000);
-							conn2.setReadTimeout(5000);
-							in = conn2.getInputStream();
-							try {
-								model.read(in, "N3");
-							} catch (Exception e3) {
-								e3.printStackTrace();
-								fail=true;
-							}
-						} catch (Exception e2) {
-							fail = true;
-							e2.printStackTrace();
-						}
-
-					}
-
-					//if (!fail) {
-					//	saveDocument(getHash(uri), in.toString());
-					//}
-
-				} catch (Exception e) {
-					e.printStackTrace();
-				}
-
-			}
-
-		}catch (Exception e){
-			e.printStackTrace();
-		}
-
-
-		// JenaReader jr = new JenaReader();
-		// jr.read(model, uri);
-		// } catch(JenaException e) {
-		// model = ModelFactory.createDefaultModel();
-
-		// }
-		return model;
-
+        try {
+            url = new URL(uri);
+            URLConnection conn = url.openConnection();
+            conn.setRequestProperty("Accept", "application/rdf+xml");
+            conn.setConnectTimeout(3000);
+            conn.setReadTimeout(5000);
+            in = conn.getInputStream();
+            try {
+                model.read(in, "RDF/XML");
+                return model;
+            } catch (Exception e) {
+                try {
+                    URL url2 = new URL(uri);
+                    URLConnection conn2 = url2.openConnection();
+                    conn2.setRequestProperty("Accept", "text/n3");
+                    conn2.setConnectTimeout(3000);
+                    conn2.setReadTimeout(5000);
+                    in = conn2.getInputStream();
+                    try {
+                        model.read(in, "N3");
+                        return model;
+                    } catch (Exception e3) {
+                        return null;
+                    }
+                } catch (Exception e2) {
+                    return null;
+                }
+            }
+        } catch (Exception e) {
+            return null;
+        }
 
 	}
 
@@ -416,36 +376,19 @@ public class DataWebResultFinder {
 		return hash;
 		//return value.hashCode();
 	}
-    private String inputStreamToString(InputStream in) {
-	    BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(in));
-	    StringBuilder stringBuilder = new StringBuilder();
-	    String line = null;
-	
-	    try {
-			while ((line = bufferedReader.readLine()) != null) {
-			stringBuilder.append(line + "\n");
-			}
-	    bufferedReader.close();
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}	    
-	    return stringBuilder.toString();
-    }
+	private static boolean updateCacheAddingRelatedURIs(long uriHash, ArrayList<String> relatedTripleURIs)  {
 
-	private static boolean updateDocumentAddingRelatedURIs(long uriHash, ArrayList<String> relatedURIs)  {
-
-		if (relatedURIs == null || relatedURIs.isEmpty()){
+		if (relatedTripleURIs == null || relatedTripleURIs.isEmpty()){
 			return false;
 		}
 		try{
 			SolrInputDocument doc = new SolrInputDocument();
 			Map<String,ArrayList<String>> relatedURIUpdate = new HashMap<>();
-			relatedURIUpdate.put("add", relatedURIs);
+			relatedURIUpdate.put("add", relatedTripleURIs);
 			doc.addField("hash", uriHash);
-			doc.addField("relatedURIs", relatedURIUpdate);
-			server.add(doc);
-			server.commit();
+			doc.addField("relatedTriplesIDs", relatedURIUpdate);
+			server_uris.add(doc);
+            server_uris.commit();
 			return true;
 		}catch (Exception e){
 			logger.error("Error: " + e.toString());
@@ -454,7 +397,7 @@ public class DataWebResultFinder {
 
 	}
 
-	private static boolean saveDocument(long hash, String uri, String urilabel, ArrayList<String> relatedURIs) throws IOException, SolrServerException {
+	private static int addURIToCache(long hash, String uri, String urilabel, ArrayList<String> relatedTripleURIs) throws IOException, SolrServerException {
 
 		if (!contains(hash)){
 
@@ -462,11 +405,11 @@ public class DataWebResultFinder {
 			doc.addField("uri", uri);
 			doc.addField("hash", hash);
 			doc.addField("label", urilabel);
-			doc.addField("relatedURIs", relatedURIs);
+			doc.addField("relatedTriplesIDs", relatedTripleURIs);
 
-			server.add(doc);
-			server.commit();
-			return true;
+			server_uris.add(doc);
+            server_uris.commit();
+			return 0;
 		}
 
 	}
@@ -477,7 +420,7 @@ public class DataWebResultFinder {
 		query.setStart(0);
 		query.set("defType", "edismax");
 
-		QueryResponse response = server.query(query);
+		QueryResponse response = server_uris.query(query);
 		SolrDocumentList results = response.getResults();
 
 		if (results != null && results.size() > 0){
