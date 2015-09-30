@@ -80,11 +80,11 @@ public class DataWebResultFinder {
 
 
         try{
-            Map<LabeledTriple, Double> similarTriples = findSimilarTriples(ltriple, 0.0, 3);
+            Map<LabeledTriple, Double> similarTriples = findSimilarTriples(ltriple, 0.0, 900);
             for (Entry<LabeledTriple, Double> entry : similarTriples.entrySet()) {
-                if (entry.getValue() > 0.0) {
+                //if (entry.getValue() > 0.0) {
                     System.out.println(entry.getValue() + " " + entry.getKey());
-                }
+                //}
             }
         }catch (Exception e){
             System.out.println(e.toString());
@@ -97,9 +97,7 @@ public class DataWebResultFinder {
         ArrayList<String> sameAs = new ArrayList<>();
         ArrayList<String> sameAsURIs = new ArrayList<>();
 
-
         try {
-
             //getting and excluding current values
             ArrayList<String> currentOnes = getCachedSameAsURIs(pURI);
             for (String uri: currentOnes){
@@ -116,10 +114,8 @@ public class DataWebResultFinder {
             service.setCache(new InMemoryCache());
             Equivalence equivalence = service.getDuplicates(URI.create(pURI));
 
-
             //cache similar SameAs resources
             for (URI uri : equivalence) {
-
                 sameAs.add(String.valueOf(uri.hashCode()));
                 sameAsURIs.add(uri.toString());
                 addURIToCache(uri.hashCode(), uri.toString(), getURILabel(null, uri.toString()), null);
@@ -153,7 +149,7 @@ public class DataWebResultFinder {
                         while (iterator.hasNext()) {
                             Object e = iterator.next();
                             SolrDocument doc_cached2 = getURIbyID(Integer.parseInt(e.toString()));
-                            ret.add(doc_cached2.getFieldValues("uri").toString());
+                            ret.add(doc_cached2.getFieldValue("uri").toString());
                         }
                     }
                 }
@@ -205,10 +201,11 @@ public class DataWebResultFinder {
                 //cache and return cached URIs
                 uris = cacheSameAsURIs(inputTriple.getSubjectURI());
             } else {
-                System.out.println(":: good! we have everything cached...");
+                System.out.println(":: good! we have everything cached! starting querying...");
                 uris = getCachedSameAsURIs(inputTriple.getSubjectURI());
             }
 
+            System.out.println("***************************************************");
             System.out.println(":: Number of equivalent URIs for [" + inputTriple.getSubjectURI() + "] : " + uris.size());
 
             long startTime = System.currentTimeMillis();
@@ -231,14 +228,14 @@ public class DataWebResultFinder {
 
             long duration = System.currentTimeMillis() - startTime;
 
-            System.out.println("***************************************************");
+
             System.out.println(":: Number of all equivalent URIs considered: " + i);
             System.out.println(":: Number of all triples: " + numberOfTriples);
             System.out.println(":: Number of relevant triples: " + numberOfRelevantTriples);
             System.out.println(":: Number of distinct relevant triples: " + relevantTriples.size());
             //System.out.println(":: Number of distinct resources: " + distinctResources.size());
             System.out.println(":: Linked Data label calls: " + labelCalls);
-            System.out.println(":: Time spend for retrieving resources: " + duration / 60 + " s");
+            System.out.println(":: Time spend for retrieving resources: " + duration * 0.001 + " s");
 
             // score all triples, which we have obtained
             System.out.println(" -> starting scoring " + ltriples.size() + " triples...");
@@ -447,10 +444,14 @@ public class DataWebResultFinder {
     /**
      * getLinkedDataURIs -> get the list of triples related to given URI.
      */
-    public static Set<LabeledTriple> getExistingTriplesByURI(String uri) {
+    public static Set<LabeledTriple> getExistingTriplesByURI(String uri) throws Exception {
 
 		//logger.info("Reading all statements from " + uri + ".");
 		Set<LabeledTriple> ltriples = new TreeSet<>();
+
+        if (StringUtils.isEmpty(uri) || StringUtils.isBlank(uri)){
+            throw new Exception("Error: URI must have a value");
+        }
 
         try{
             //if uri exists in cache, then get from cache
@@ -523,6 +524,8 @@ public class DataWebResultFinder {
 		Model model = ModelFactory.createDefaultModel();
 		URL url;
 		InputStream in = null;
+
+        labelCalls++;
 
         try {
             url = new URL(uri);
