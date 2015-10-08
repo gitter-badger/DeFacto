@@ -30,16 +30,18 @@ public class BoaPatternSearcher {
     private static HttpSolrServer deIndex;
     private static HttpSolrServer frIndex;
     private Logger logger = Logger.getLogger(BoaPatternSearcher.class);
+    private Logger loggerdev = Logger.getLogger("developer");
 	private Map<String,QueryResponse> queryCache = new HashMap<>();
 
     public BoaPatternSearcher(){
-    	
+
         enIndex = new HttpSolrServer(Defacto.DEFACTO_CONFIG.getStringSetting("crawl", "solr_boa_en"));
         enIndex.setRequestWriter(new BinaryRequestWriter());
         deIndex = new HttpSolrServer(Defacto.DEFACTO_CONFIG.getStringSetting("crawl", "solr_boa_de"));
         deIndex.setRequestWriter(new BinaryRequestWriter());
         frIndex = new HttpSolrServer(Defacto.DEFACTO_CONFIG.getStringSetting("crawl", "solr_boa_fr"));
         frIndex.setRequestWriter(new BinaryRequestWriter());
+
     }
     
     /**
@@ -53,8 +55,9 @@ public class BoaPatternSearcher {
      */
     public List<Pattern> getNaturalLanguageRepresentations(String propertyUri, String language){
 
-        return querySolrIndex(propertyUri, 
-                50, 
+        int numberOfBoaPatterns = 50;
+        return querySolrIndex(propertyUri,
+                numberOfBoaPatterns,
                 Defacto.DEFACTO_CONFIG.getDoubleSetting("boa", "PATTERN_SCORE_THRESHOLD"), language);
     }
     
@@ -70,7 +73,7 @@ public class BoaPatternSearcher {
 
         return querySolrIndex(propertyUri, numberOfBoaPatterns, 0.5D, language);
     }
-    
+
     /**
      * 
      * 
@@ -79,9 +82,146 @@ public class BoaPatternSearcher {
      * @param patternThreshold
      * @return
      */
-    public List<Pattern> getNaturalLanguageRepresentations(String propertyUri, int numberOfBoaPatterns, double patternThreshold, String language){
+    public List<Pattern> getInverseNaturalLanguageRepresentations(String propertyUri, String language){
 
-        return querySolrIndex(propertyUri, numberOfBoaPatterns, patternThreshold, language);
+        //We should think how we will (technically) merge this and current BOA architecture
+        //return querySolrIndex(propertyUri, numberOfBoaPatterns, patternThreshold, language);
+        Map<String,Pattern> patterns = new HashMap<>();
+
+        if (propertyUri.equals("http://dbpedia.org/ontology/office"))
+            propertyUri = "http://dbpedia.org/ontology/leaderName";
+
+        try {
+
+            if (propertyUri.equals("http://dbpedia.org/ontology/nflTeam")) {
+
+            } else if (propertyUri.equals("http://dbpedia.org/ontology/publicationDate")) {
+
+            } else if (propertyUri.equals("http://dbpedia.org/ontology/starring")) {
+
+            } else if (propertyUri.equals("http://dbpedia.org/ontology/award")) {
+
+                if (language.equals("en")){
+
+                    this.logger.debug("Starting loading counter patterns for dbo:award: ");
+
+                    Pattern pattern1 = new Pattern();
+                    pattern1.generalized = "?D? _BE_ not awarded ?R?";
+                    pattern1.naturalLanguageRepresentation = "?!D? was not awarded the ?R?";
+                    pattern1.naturalLanguageRepresentationWithoutVariables = "was not awarded the";
+                    pattern1.posTags = "VBD RB VBN DT";
+                    pattern1.boaScore = 0d;
+                    pattern1.language = language;
+                    patterns.put(pattern1.getNormalized(), pattern1);
+
+                    Pattern pattern2 = new Pattern();
+                    pattern2.generalized = "?R? not winner ?D?";
+                    pattern2.naturalLanguageRepresentation = "?R? not winner ?D?";
+                    pattern2.naturalLanguageRepresentationWithoutVariables = "not winner";
+                    pattern2.posTags = "RB NN";
+                    pattern2.boaScore = 0d;
+                    pattern2.language = language;
+                    patterns.put(pattern2.getNormalized(), pattern2);
+
+                    Pattern pattern3 = new Pattern();
+                    pattern3.generalized = "?R? loser ?D?";
+                    pattern3.naturalLanguageRepresentation = "?R? loser ?D?";
+                    pattern3.naturalLanguageRepresentationWithoutVariables = "loser";
+                    pattern3.posTags = "NN";
+                    pattern3.boaScore = 0d;
+                    pattern3.language = language;
+                    patterns.put(pattern3.getNormalized(), pattern3);
+
+                    Pattern pattern4 = new Pattern();
+                    pattern4.generalized = "?D? did not win ?R?";
+                    pattern4.naturalLanguageRepresentation = "?D? did not win the ?R?";
+                    pattern4.naturalLanguageRepresentationWithoutVariables = "did not win the";
+                    pattern4.posTags = "VBD RB VB";
+                    pattern4.boaScore = 0d;
+                    pattern4.language = language;
+                    patterns.put(pattern4.getNormalized(), pattern4);
+
+                    Pattern pattern5 = new Pattern();
+                    pattern5.generalized = "?D? did not receive ?R?";
+                    pattern5.naturalLanguageRepresentation = "?D? did not receive the ?R?";
+                    pattern5.naturalLanguageRepresentationWithoutVariables = "did not receive the";
+                    pattern5.posTags = "VBD RB VB";
+                    pattern5.boaScore = 0d;
+                    pattern5.language = language;
+                    patterns.put(pattern5.getNormalized(), pattern5);
+
+                    Pattern pattern6 = new Pattern();
+                    pattern6.generalized = "?D? renounce ?R?";
+                    pattern6.naturalLanguageRepresentation = "?D? renounce the ?R?";
+                    pattern6.naturalLanguageRepresentationWithoutVariables = "renounce the";
+                    pattern6.posTags = "VB DT";
+                    pattern6.boaScore = 0d;
+                    pattern6.language = language;
+                    patterns.put(pattern6.getNormalized(), pattern6);
+
+                    Pattern pattern7 = new Pattern();
+                    pattern7.generalized = "?D? rejected ?R?";
+                    pattern7.naturalLanguageRepresentation = "?D? rejected the ?R?";
+                    pattern7.naturalLanguageRepresentationWithoutVariables = "rejected the";
+                    pattern7.posTags = "VBD DT";
+                    pattern7.boaScore = 0d;
+                    pattern7.language = language;
+                    patterns.put(pattern7.getNormalized(), pattern7);
+
+                    Pattern pattern8 = new Pattern();
+                    pattern8.generalized = "?D? _BE_ not prizewinning ?R?";
+                    pattern8.naturalLanguageRepresentation = "?D? was not prizewinning ?R?";
+                    pattern8.naturalLanguageRepresentationWithoutVariables = "was not prizewinning";
+                    pattern8.posTags = "VBD RB VBG";
+                    pattern8.boaScore = 0d;
+                    pattern8.language = language;
+                    patterns.put(pattern8.getNormalized(), pattern8);
+
+                    Pattern pattern9 = new Pattern();
+                    pattern9.generalized = "?R? _BE_ not the recipient of ?D?";
+                    pattern9.naturalLanguageRepresentation = "?R? was not the recipient of ?D?";
+                    pattern9.naturalLanguageRepresentationWithoutVariables = "was not the recipient of";
+                    pattern9.posTags = "VBD RB DT JJ IN";
+                    pattern9.boaScore = 0d;
+                    pattern9.language = language;
+                    patterns.put(pattern9.getNormalized(), pattern9);
+
+                    Pattern pattern10 = new Pattern();
+                    pattern10.generalized = "?R? losers ?D?";
+                    pattern10.naturalLanguageRepresentation = "?R? losers ?D?";
+                    pattern10.naturalLanguageRepresentationWithoutVariables = "losers";
+                    pattern10.posTags = "NNS";
+                    pattern10.boaScore = 0d;
+                    pattern10.language = language;
+                    patterns.put(pattern10.getNormalized(), pattern10);
+
+                }
+
+
+            } else if (propertyUri.equals("http://dbpedia.org/ontology/birthDate")) {
+
+            } else if (propertyUri.equals("http://dbpedia.org/ontology/deathPlace")) {
+
+            } else if (propertyUri.equals("http://dbpedia.org/ontology/foundationPlace")) {
+
+            }  else if (propertyUri.equals("http://dbpedia.org/ontology/leaderName")) {
+
+            } else if (propertyUri.equals("http://dbpedia.org/ontology/spouse")) {
+
+            } else if (propertyUri.equals("http://dbpedia.org/ontology/subsidiary")) {
+
+            }
+
+        }
+        catch (Exception e){
+            System.out.println("Could not execute query: " + e);
+            e.printStackTrace();
+        }
+
+        List<Pattern> patternList = new ArrayList<>(patterns.values());
+
+        return patternList;
+
     }
     
     /**
@@ -160,58 +300,67 @@ public class BoaPatternSearcher {
             public int compare(Pattern pattern1, Pattern pattern2) {
 
                 double difference = pattern1.boaScore - pattern2.boaScore;
-                if ( difference > 0 ) return -1;
-                if ( difference < 0 ) return 1;
-                
+                if (difference > 0) return -1;
+                if (difference < 0) return 1;
+
                 return pattern1.naturalLanguageRepresentation.compareTo(pattern2.naturalLanguageRepresentation);
             }
         });
-        
+        this.loggerdev.debug(":: Returned BOA Patterns");
+        for (Pattern ptemp: patternList) {
+            this.loggerdev.debug(ptemp.naturalLanguageRepresentation.toString());
+        }
+
         return patternList;
+
     }
     
     public static void main(String[] args) {
 
+
+
     	Defacto.init();
-//        queryPatterns("http://dbpedia.org/ontology/award");
-//        System.out.println("--------------");
-//        queryPatterns("http://dbpedia.org/ontology/birthPlace");
-//        System.out.println("--------------");
-//        queryPatterns("http://dbpedia.org/ontology/deathPlace");
-//        System.out.println("--------------");
-//        queryPatterns("http://dbpedia.org/ontology/foundationPlace");
+        queryPatterns("http://dbpedia.org/ontology/award");
         System.out.println("--------------");
-//        queryPatterns("http://dbpedia.org/ontology/leaderName");
+        queryPatterns("http://dbpedia.org/ontology/birthPlace");
         System.out.println("--------------");
-//        queryPatterns("http://dbpedia.org/ontology/team");
+        queryPatterns("http://dbpedia.org/ontology/deathPlace");
         System.out.println("--------------");
-//        queryPatterns("http://dbpedia.org/ontology/author");
-//        System.out.println("--------------");
+        queryPatterns("http://dbpedia.org/ontology/foundationPlace");
+        System.out.println("--------------");
+        queryPatterns("http://dbpedia.org/ontology/leaderName");
+        System.out.println("--------------");
+        queryPatterns("http://dbpedia.org/ontology/team");
+        System.out.println("--------------");
+        queryPatterns("http://dbpedia.org/ontology/author");
+        System.out.println("--------------");
         queryPatterns("http://dbpedia.org/ontology/spouse");
-//        System.out.println("--------------");
-//        queryPatterns("http://dbpedia.org/ontology/starring");
-//        System.out.println("--------------");
-//        queryPatterns("http://dbpedia.org/ontology/subsidiary");
+        System.out.println("--------------");
+        queryPatterns("http://dbpedia.org/ontology/starring");
+        System.out.println("--------------");
+        queryPatterns("http://dbpedia.org/ontology/subsidiary");
     }
 
 	/**
 	 * @param bps
 	 */
 	private static void queryPatterns(String uri) {
+
+
 		
 		int nr = 50;
 		BoaPatternSearcher bps = new BoaPatternSearcher();
 		List<Pattern> sub = new ArrayList<>();
         sub.addAll(bps.getNaturalLanguageRepresentations(uri, nr, "en"));
-//        sub.addAll(bps.getNaturalLanguageRepresentations(uri, nr, "de"));
-//        sub.addAll(bps.getNaturalLanguageRepresentations(uri, nr,  "fr"));
+       // sub.addAll(bps.getNaturalLanguageRepresentations(uri, nr, "de"));
+        //sub.addAll(bps.getNaturalLanguageRepresentations(uri, nr,  "fr"));
         
         System.out.println(uri);
         Iterator<Pattern> iterator = sub.iterator();
         while ( iterator.hasNext()) {
 			Pattern pattern = iterator.next();
 			
-            System.out.println(pattern.naturalLanguageRepresentation + " --- " + pattern.normalize());
+            System.out.println(pattern.naturalLanguageRepresentation + " --> " + pattern.normalize());
         }
         System.out.println();
 	}

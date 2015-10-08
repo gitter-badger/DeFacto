@@ -50,7 +50,7 @@ public class EvidenceCrawler {
     private Map<Pattern,MetaQuery> patternToQueries;
     private DefactoModel model;
     
-    public static Map<DefactoModel,Evidence> evidenceCache = new HashMap<DefactoModel,Evidence>();
+    public Map<DefactoModel,Evidence> evidenceCache = new HashMap<DefactoModel,Evidence>();
     
     /**
      * 
@@ -58,7 +58,6 @@ public class EvidenceCrawler {
      * @param patternToQueries
      */
     public EvidenceCrawler(DefactoModel model, Map<Pattern, MetaQuery> queries) {
-
         this.patternToQueries = queries;
         this.model            = model;
     }

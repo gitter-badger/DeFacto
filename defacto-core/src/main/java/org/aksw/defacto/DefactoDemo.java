@@ -164,8 +164,10 @@ public class DefactoDemo {
     private static DefactoModel getOneExample(){
 
         Model model = ModelFactory.createDefaultModel();
-        model.read(DefactoModel.class.getClassLoader().getResourceAsStream("GhostbusterII.ttl"), null, "TURTLE");
-        return new DefactoModel(model, "Ghostbuster II Model", true, Arrays.asList("en", "fr", "de"));
+        //model.read(DefactoModel.class.getClassLoader().getResourceAsStream("GhostbusterII.ttl"), null, "TURTLE");
+        model.read(DefactoModel.class.getClassLoader().getResourceAsStream("Nobel1909.ttl"), null, "TURTLE");
+        //return new DefactoModel(model, "Ghostbuster II Model", true, Arrays.asList("en", "fr", "de"));
+        return new DefactoModel(model, "Nobel Model", true, Arrays.asList("en", "fr", "de"));
 
         //model.read(DefactoModel.class.getClassLoader().getResourceAsStream("Einstein.ttl"), null, "TURTLE");
         //return new DefactoModel(model, "Einstein Model", true, Arrays.asList("en", "fr", "de"));

@@ -31,17 +31,50 @@ public class QueryGenerator {
         
         this.model = model;
     }
+
+    public Map<Pattern,MetaQuery> getCounterExampleSearchEngineQueries(String language){
+        return this.generateCounterExampleSearchQueries(model.getFact(), language);
+    }
+
+    private Map<Pattern,MetaQuery> generateCounterExampleSearchQueries(Statement fact, String language){
+
+        Map<Pattern,MetaQuery> counterqueryStrings =  new HashMap<>();
+        String subjectLabel = model.getSubjectLabelNoFallBack(language);
+        String objectLabel  = model.getObjectLabelNoFallBack(language);
+
+        // we dont have labels in the given language so we generate a foreign query with english labels
+        if ( subjectLabel.equals(Constants.NO_LABEL) || objectLabel.equals(Constants.NO_LABEL) ) {
+            subjectLabel = model.getSubjectLabel("en");
+            objectLabel = model.getObjectLabel("en");
+        }
+        for (Pattern pattern : patternSearcher.getInverseNaturalLanguageRepresentations(fact.getPredicate().getURI(), language)) {
+
+            if ( !pattern.getNormalized().trim().isEmpty() ) {
+
+                MetaQuery metaQuery = new MetaQuery(subjectLabel, pattern.getNormalized(), objectLabel, language, null);
+                System.out.println(metaQuery);
+                counterqueryStrings.put(pattern, metaQuery);
+            }
+        }
+
+        // add one query without any predicate
+        counterqueryStrings.put(new Pattern("??? NONE ???", language), new MetaQuery(subjectLabel, "??? NONE ???", objectLabel, language, null));
+        LOGGER.debug(String.format("Generated %s negated queries for fact ('%s'): %s", counterqueryStrings.size(), language, fact.asTriple()));
+
+        return counterqueryStrings;
+
+    }
     
     /**
      * 
      * @return
      */
     public Map<Pattern,MetaQuery> getSearchEngineQueries(String language){
-        
         // and generate the query strings 
         return this.generateSearchQueries(model.getFact(), language);
     }
-    
+
+
     /**
      * 
      * @param uriToLabels
@@ -50,7 +83,7 @@ public class QueryGenerator {
      */
     private Map<Pattern,MetaQuery> generateSearchQueries(Statement fact, String language){
      
-        Map<Pattern,MetaQuery> queryStrings =  new HashMap<Pattern,MetaQuery>();
+        Map<Pattern,MetaQuery> queryStrings =  new HashMap<>();
         String subjectLabel = model.getSubjectLabelNoFallBack(language);//.replaceAll("\\(.+?\\)", "").trim(); 
         String objectLabel  = model.getObjectLabelNoFallBack(language);//.replaceAll("\\(.+?\\)", "").trim();
         
@@ -79,4 +112,5 @@ public class QueryGenerator {
         
         return queryStrings;
     }
+
 }
