@@ -34,6 +34,7 @@ import weka.core.Instance;
  */
 public class Evidence {
 
+    private Evidence negative;
     private DefactoModel model;
     private Map<Pattern,List<WebSite>> webSites         = new LinkedHashMap<Pattern,List<WebSite>>();
     private Map<String,List<Word>> topicTerms           = new HashMap<String,List<Word>>();
@@ -48,6 +49,11 @@ public class Evidence {
     private Instance features;
     private Long totalHitCount;
     private double deFactoScore;
+
+    //the score of the reversed fact function
+    private double deFactoCounterargumentScore;
+    //the score combining both deFactoScore and deFactoCounterargumentScore
+    private double deFactoCombinedScore;
     
     private Set<ComplexProof> complexProofs;
     private Map<String,List<Pattern>> boaPatterns = new HashMap<String,List<Pattern>>();
@@ -97,6 +103,13 @@ public class Evidence {
         }
         
         return features;
+    }
+
+    public void setNegativeEvidenceObject(Evidence e){
+        this.negative = e;
+    }
+    public Evidence getNegativeEvidenceObject(){
+        return this.negative;
     }
 
     /**
@@ -215,6 +228,41 @@ public class Evidence {
 //    
 //        return similarityMatricies;
 //    }
+
+    /**
+     *
+     * @param score
+     */
+    public void setDeFactoCounterargumentScore(double score) {
+
+        this.deFactoCounterargumentScore = score;
+
+    }
+
+    /**
+     *
+     * @return
+     */
+    public Double getDeFactoCounterargumentScore() {
+
+        return this.deFactoCounterargumentScore;
+    }
+
+    public Double getDeFactoCombinedScore() {
+
+        try{
+
+            this.deFactoCombinedScore = (deFactoScore + (1 - deFactoCounterargumentScore)) / 2;
+
+            return deFactoCombinedScore;
+
+        }catch (Exception e){
+
+         return -1d;
+
+        }
+
+    }
 
     /**
      * 

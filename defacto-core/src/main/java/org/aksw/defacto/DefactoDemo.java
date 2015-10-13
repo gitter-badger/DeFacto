@@ -9,7 +9,9 @@ import java.util.*;
 import com.hp.hpl.jena.graph.Triple;
 import com.hp.hpl.jena.rdf.model.Property;
 import org.aksw.defacto.Defacto.TIME_DISTRIBUTION_ONLY;
+import org.aksw.defacto.boa.Pattern;
 import org.aksw.defacto.evidence.Evidence;
+import org.aksw.defacto.evidence.WebSite;
 import org.aksw.defacto.model.DefactoModel;
 import org.apache.commons.io.FileUtils;
 import org.apache.log4j.LogManager;
@@ -48,7 +50,44 @@ public class DefactoDemo {
             final Calendar endTime = Calendar.getInstance();
             LOG.info(endTime);
 
-            System.out.println("DeFacto: alright! DeFacto's score: " + evidence.getDeFactoScore());
+            System.out.println("DeFacto: Overall score: " + evidence.getDeFactoScore());
+            System.out.println("DeFacto: Overall counterargument score: " + evidence.getDeFactoCounterargumentScore());
+
+            List<WebSite> allWebSites = evidence.getAllWebSites();
+
+            System.out.println("All websites");
+            for (WebSite w: allWebSites){
+                System.out.println(w.getUrl());
+            }
+            System.out.println("********************************************************************");
+
+            System.out.println("Matched websites");
+            for ( Map.Entry<Pattern, List<WebSite>> patternToWebSites : evidence.getWebSites().entrySet()) {
+                for ( WebSite website : patternToWebSites.getValue() ) {
+                    System.out.println(website.getUrl());
+                }
+            }
+
+            System.out.println("********************************************************************");
+
+            List<WebSite> allWebSites2 = evidence.getNegativeEvidenceObject().getAllWebSites();
+
+            System.out.println("All websites (counterargument)");
+            for (WebSite w: allWebSites2){
+                System.out.println(w.getUrl());
+            }
+            System.out.println("********************************************************************");
+
+            System.out.println("Matched websites (counterargument)");
+            for ( Map.Entry<Pattern, List<WebSite>> patternToWebSites : evidence.getNegativeEvidenceObject().getWebSites().entrySet()) {
+                for ( WebSite website : patternToWebSites.getValue() ) {
+                    System.out.println(website.getUrl());
+                }
+            }
+            
+            System.out.println("********************************************************************");
+
+
 
         }catch (Exception e){
             System.out.println("Error: " + e.toString());

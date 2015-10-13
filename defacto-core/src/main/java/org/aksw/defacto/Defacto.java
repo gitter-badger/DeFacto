@@ -55,6 +55,7 @@ public class Defacto {
     
     private static final Logger LOGGER = LoggerFactory.getLogger(Defacto.class);
     private static final boolean searchCounterargument = true;
+    private static boolean foundCounterargument = true;
     
     /**
      * @param model the model to check. this model may only contain the link between two resources
@@ -99,7 +100,6 @@ public class Defacto {
                     Map<Pattern, MetaQuery> q = queryGenerator.getCounterExampleSearchEngineQueries(language);
                     queries2.putAll(q);
                 }
-
             }
         }
 
@@ -124,8 +124,15 @@ public class Defacto {
             EvidenceCrawler crawler2 = new EvidenceCrawler(model, queries2);
             evidence2 = crawler2.crawlEvidence(engine);
             LOGGER.info("Crawling (counter argument) evidence took " + TimeUtil.formatTime(System.currentTimeMillis() - startCrawl));
+
+            //short cut to avoid unnecessary computation
+            foundCounterargument = (evidence2.getAllWebSites().size() > 0);
         }
 
+        //nothing has been found to corroborate with the negated claim
+        if (!foundCounterargument){
+            evidence.setDeFactoCounterargumentScore(0.0d);
+        }
         // short cut to avoid unnecessary computation
         if ( onlyTimes.equals(TIME_DISTRIBUTION_ONLY.YES) ) return evidence;
 
@@ -138,12 +145,14 @@ public class Defacto {
         factFeatureExtraction.extractFeatureForFact(evidence);
         LOGGER.info("Fact feature extraction took " + TimeUtil.formatTime(System.currentTimeMillis() - startFactConfirmation));
 
-        if (searchCounterargument) {
+
+        if (searchCounterargument && foundCounterargument) {
             startFactConfirmation = System.currentTimeMillis();
             FactFeatureExtraction factFeatureExtraction2 = new FactFeatureExtraction();
             factFeatureExtraction2.extractFeatureForFact(evidence2);
             LOGGER.info("Fact feature (counter argument) extraction took " + TimeUtil.formatTime(System.currentTimeMillis() - startFactConfirmation));
         }
+
         /*********************************************************************************************************************
          [4] score the facts
          *********************************************************************************************************************/
@@ -154,11 +163,11 @@ public class Defacto {
         factScorer.scoreEvidence(evidence);
         LOGGER.info("Fact Scoring took " + TimeUtil.formatTime(System.currentTimeMillis() - startFactScoring));
 
-        if (searchCounterargument) {
+        if (searchCounterargument && foundCounterargument) {
             startFactScoring = System.currentTimeMillis();
             FactScorer factScorer2 = new FactScorer();
             factScorer2.scoreEvidence(evidence2);
-            LOGGER.info("Fact Scoring (counter arguments) took " + TimeUtil.formatTime(System.currentTimeMillis() - startFactScoring));
+            LOGGER.info("Fact Scoring (counterarguments) took " + TimeUtil.formatTime(System.currentTimeMillis() - startFactScoring));
         }
         /*********************************************************************************************************************
          [5] calculate the factFeatures for the model
@@ -169,17 +178,38 @@ public class Defacto {
         EvidenceFeatureExtractor featureCalculator = new EvidenceFeatureExtractor();
         featureCalculator.extractFeatureForEvidence(evidence);
         LOGGER.info("Evidence feature extraction took " + TimeUtil.formatTime(System.currentTimeMillis() - startFeatureExtraction));
-            
+
+        if (searchCounterargument && foundCounterargument) {
+            long startFeatureExtraction2 = System.currentTimeMillis();
+            EvidenceFeatureExtractor featureCalculator2 = new EvidenceFeatureExtractor();
+            featureCalculator2.extractFeatureForEvidence(evidence2);
+            LOGGER.info("Evidence feature extraction (counterargument) took " + TimeUtil.formatTime(System.currentTimeMillis() - startFeatureExtraction2));
+        }
+
+
         if ( !Defacto.DEFACTO_CONFIG.getBooleanSetting("settings", "TRAINING_MODE") ) {
 
             long startScoring = System.currentTimeMillis();
             EvidenceScorer scorer = new EvidenceScorer();
             scorer.scoreEvidence(evidence);
             LOGGER.info("Evidence Scoring took " + TimeUtil.formatTime(System.currentTimeMillis() - startScoring));
+
+            if (searchCounterargument && foundCounterargument) {
+                long startScoring2 = System.currentTimeMillis();
+                EvidenceScorer scorer2 = new EvidenceScorer();
+                scorer2.scoreEvidence(evidence2);
+                LOGGER.info("Evidence Scoring (counterargument) took " + TimeUtil.formatTime(System.currentTimeMillis() - startScoring2));
+            }
         }
 
+        if (searchCounterargument && foundCounterargument) {
+            evidence.setDeFactoCounterargumentScore(evidence2.getDeFactoScore());
+            evidence.setNegativeEvidenceObject(evidence2);
+        }
 
         LOGGER.info("Overall time for fact: " +  TimeUtil.formatTime(System.currentTimeMillis() - start));
+
+        //returning enhanced evidence (we should later merge the positive and negative evidences in one object)
         return evidence;
     }
     
