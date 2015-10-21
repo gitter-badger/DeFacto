@@ -46,6 +46,7 @@ import org.slf4j.LoggerFactory;
 public class EvidenceCrawler {
 
 	private static final Logger LOGGER = LoggerFactory.getLogger(EvidenceCrawler.class);
+    public static org.apache.log4j.Logger LOGDEV    = org.apache.log4j.Logger.getLogger("developer");
     java.util.regex.Pattern pattern = java.util.regex.Pattern.compile("[0-9]{4}");
     private Map<Pattern,MetaQuery> patternToQueries;
     private DefactoModel model;
@@ -75,9 +76,9 @@ public class EvidenceCrawler {
     	if ( !evidenceCache.containsKey(this.model) ) {
     		
     		long start = System.currentTimeMillis();
-        	LOGGER.info("Start getting search results");
+            LOGDEV.debug("  start getting search results");
             Set<SearchResult> searchResults = this.generateSearchResultsInParallel(engine);
-            LOGGER.info("Finished getting search results in " + (System.currentTimeMillis() - start));
+            LOGDEV.debug("  finished getting search results in " + (System.currentTimeMillis() - start));
             
             // multiple pattern bring the same results but we dont want that
             this.filterSearchResults(searchResults);
@@ -86,13 +87,21 @@ public class EvidenceCrawler {
             for ( SearchResult result : searchResults ) {
             	totalHitCount += result.getTotalHitCount();  
             }
+
+            LOGDEV.debug(" total hint count = " + totalHitCount);
                     
             evidence = new Evidence(model, totalHitCount, patternToQueries.keySet());
+
             // basically downloads all websites in parallel
+            LOGDEV.debug(" starting crawling the search results...");
             crawlSearchResults(searchResults, model, evidence);
+
             // tries to find proofs and possible proofs and scores those
+            LOGDEV.debug(" scoring the search results...");
             scoreSearchResults(searchResults, model, evidence);
+
             // put it in solr cache
+            LOGDEV.debug(" caching search results...");
             cacheSearchResults(searchResults);
                     
             // start multiple threads to download the text of the websites simultaneously
@@ -124,7 +133,7 @@ public class EvidenceCrawler {
         	}
             evidence.calculateSimilarityMatrix();
         }
-        LOGGER.info(String.format("Extraction of topic terms took %s", TimeUtil.formatTime(System.currentTimeMillis() - start)));
+        LOGGER.info(String.format("  -> Extraction of topic terms took %s", TimeUtil.formatTime(System.currentTimeMillis() - start)));
         
         return evidence;
     }
@@ -145,7 +154,7 @@ public class EvidenceCrawler {
         		results.add(result);
         
         cache.addAll(results);
-        LOGGER.debug(String.format("Caching took %sms", System.currentTimeMillis()-start));
+        LOGGER.debug(String.format("  -> Caching took %sms", System.currentTimeMillis()-start));
 	}
 
     /**
@@ -163,15 +172,18 @@ public class EvidenceCrawler {
         for ( Map.Entry<Pattern, MetaQuery> entry : this.patternToQueries.entrySet())
             searchResultCallables.add(new SearchResultCallable(entry.getValue(), entry.getKey(), engine));
         
-        LOGGER.info("Starting to crawl/get from cache " + searchResultCallables.size() + " search results with " +
-        		Defacto.DEFACTO_CONFIG.getIntegerSetting("crawl", "NUMBER_OF_SEARCH_RESULTS_THREADS") + " threads.");
+        LOGDEV.debug(" -> Starting to crawl/get from cache " + searchResultCallables.size() + " search results with " +
+                Defacto.DEFACTO_CONFIG.getIntegerSetting("crawl", "NUMBER_OF_SEARCH_RESULTS_THREADS") + " threads.");
         
         try {
         	
         	ExecutorService executor = Executors.newFixedThreadPool(Defacto.DEFACTO_CONFIG.getIntegerSetting("crawl", "NUMBER_OF_SEARCH_RESULTS_THREADS"));
+            int i=1;
             for ( Future<SearchResult> result : executor.invokeAll(searchResultCallables)) {
 
                 results.add(result.get());
+                LOGDEV.debug(" query " + i + ": " + result.get().getQuery().toString() + ": nr. websites = " + result.get().getWebSites().size());
+                i++;
             }
             executor.shutdownNow();
         }

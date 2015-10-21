@@ -30,7 +30,7 @@ public class BoaPatternSearcher {
     private static HttpSolrServer deIndex;
     private static HttpSolrServer frIndex;
     private Logger logger = Logger.getLogger(BoaPatternSearcher.class);
-    private Logger loggerdev = Logger.getLogger("developer");
+    private Logger LOGDEV = Logger.getLogger("developer");
 	private Map<String,QueryResponse> queryCache = new HashMap<>();
 
     public BoaPatternSearcher(){
@@ -234,9 +234,8 @@ public class BoaPatternSearcher {
      */
     public List<Pattern> querySolrIndex(String propertyUri, int numberOfBoaPatterns, double scoreThreshold, String language) {
 
-    	
-    	 this.logger.debug("Querying solr index for uri: " + propertyUri + " and language " + language + "."); 
-    	
+        LOGDEV.debug(" -> Querying solr index for uri: " + propertyUri + " and language " + language + ".");
+
         Map<String,Pattern> patterns = new HashMap<String,Pattern>();
 
         try {
@@ -265,6 +264,7 @@ public class BoaPatternSearcher {
             SolrDocumentList docList = this.queryCache.get(key).getResults();
             
             // return the first list of types
+            int i=0;
             for (SolrDocument d : docList) {
 
             	Pattern pattern = new Pattern();
@@ -275,7 +275,7 @@ public class BoaPatternSearcher {
                 pattern.boaScore = (Double) d.get("SUPPORT_NUMBER_OF_PAIRS_LEARNED_FROM");
                 pattern.language = language;
                 
-                this.logger.debug("Found pattern: " + pattern.naturalLanguageRepresentation); 
+                LOGDEV.debug(" " + i + " Found pattern: " + pattern.naturalLanguageRepresentation);
                 
 //                System.out.println(pattern.getNormalized());
                 
@@ -284,10 +284,13 @@ public class BoaPatternSearcher {
                 		&& patterns.size() < Defacto.DEFACTO_CONFIG.getIntegerSetting("boa", "NUMBER_OF_BOA_PATTERNS") ) 
                 	patterns.put(pattern.getNormalized(), pattern);
             }
+
+            LOGDEV.debug("");
+
         }
         catch (SolrServerException e) {
 
-            System.out.println("Could not execute query: " + e);
+            LOGDEV.debug("Could not execute query: " + e);
             e.printStackTrace();
         }
         
@@ -306,9 +309,10 @@ public class BoaPatternSearcher {
                 return pattern1.naturalLanguageRepresentation.compareTo(pattern2.naturalLanguageRepresentation);
             }
         });
-        this.loggerdev.debug(":: Returned BOA Patterns");
+        int i =1;
         for (Pattern ptemp: patternList) {
-            this.loggerdev.debug(ptemp.naturalLanguageRepresentation.toString());
+            LOGDEV.debug(" " + i + " BOA pattern: " + ptemp.naturalLanguageRepresentation.toString());
+            i++;
         }
 
         return patternList;

@@ -53,7 +53,7 @@ import com.hp.hpl.jena.vocabulary.RDFS;
 public class DataWebResultFinder {
 
     private static Logger logger = Logger.getLogger(DataWebResultFinder.class);
-    private static int cacheExpiresAfterDays = 30;
+    private static int cacheExpiresAfterDays = 120;
     private static HttpSolrServer server_triples = new HttpSolrServer("http://localhost:8123/solr/ld_triples");
     private static HttpSolrServer server_uris = new HttpSolrServer("http://localhost:8123/solr/ld_uris");
     private static ArrayList<String> blackList = new ArrayList<>();
@@ -64,20 +64,20 @@ public class DataWebResultFinder {
     private static Long labelCalls = 0L;
     private static Set<String> relevantTriples = new TreeSet<>();
     private static SameAsService service;
-    final static String DATE_FORMAT = "yyyy-MM-dd";
 
     static {
         notAllowedProperties.add("http://www.w3.org/2002/07/owl#sameAs");
         notAllowedProperties.add("http://www.w3.org/1999/02/22-rdf-syntax-ns#type");
     }
 
+    public DataWebResultFinder(){
+        blackList.add("http://www.econbiz.de/");
+    }
+
     public static void main(String args[]) throws SameAsServiceException {
 
         //curl http://localhost:8123/solr/ld_uris/update?commit=true -H "Content-Type: text/xml" --data-binary '<delete><query>*:*</query></delete>'
         //curl http://localhost:8123/solr/ld_triples/update?commit=true -H "Content-Type: text/xml" --data-binary '<delete><query>*:*</query></delete>'
-
-
-        blackList.add("http://www.econbiz.de/");
 
         DataWebResultFinder finder = new DataWebResultFinder();
 
@@ -89,15 +89,14 @@ public class DataWebResultFinder {
                 "http://dbpedia.org/ontology/Place", "place",
                 "http://dbpedia.org/resource/Rio_de_Janeiro", "Rio de Janeiro");
 
-
         try{
-            Map<LabeledTriple, Double> similarTriples = findSimilarTriples(ltriple2, 0.0, 100);
+            Map<LabeledTriple, Double> similarTriples = finder.findSimilarTriples(ltriple2, 0.0, 100);
 
             //not necessary though
             Map<LabeledTriple, Double> sortedMap = sortByComparator(similarTriples);
 
             for (Entry<LabeledTriple, Double> entry : sortedMap.entrySet()) {
-                if (entry.getValue() > 0.34) {
+                if (entry.getValue() > 0.20) {
                     System.out.println(entry.getValue() + " " + entry.getKey());
                 }
             }
@@ -107,7 +106,7 @@ public class DataWebResultFinder {
 
     }
 
-    private static ArrayList<String> cacheURIs(String pURI) throws Exception {
+    private ArrayList<String> cacheURIs(String pURI) throws Exception {
         boolean ret = false;
         ArrayList<String> sameAs = new ArrayList<>();
         ArrayList<String> sameAsURIs = new ArrayList<>();
@@ -167,7 +166,7 @@ public class DataWebResultFinder {
 
     }
 
-    private static ArrayList<String> getCachedSameAsURIs(String pURI) throws Exception{
+    private ArrayList<String> getCachedSameAsURIs(String pURI) throws Exception{
 
         ArrayList<String> ret = new ArrayList<>();
         Iterator<Object> iterator = null;
@@ -221,7 +220,7 @@ public class DataWebResultFinder {
         //}
     }
 
-    private static boolean isTimeToCacheAgain(String pURI) throws Exception {
+    private boolean isTimeToCacheAgain(String pURI) throws Exception {
 
         Date d = new Date();
         Date cachedDate;
@@ -253,7 +252,7 @@ public class DataWebResultFinder {
 
     }
 
-    public static Map<LabeledTriple, Double> findSimilarTriples(LabeledTriple inputTriple, double threshold, int maximumEquivalentURIs) throws Exception {
+    public Map<LabeledTriple, Double> findSimilarTriples(LabeledTriple inputTriple, double threshold, int maximumEquivalentURIs) throws Exception {
 
         ArrayList<String> uris = null;
         Map<LabeledTriple, Double> simTriples = new HashMap<>();
@@ -275,6 +274,7 @@ public class DataWebResultFinder {
 
             //check whether the URI exists
             if (!containsURI(inputTriple.getSubjectURI().hashCode())){
+                System.out.println(" -> adding s,p,o for input triple...");
                 //subject
                 addURIToCache(inputTriple.getSubjectURI().hashCode(), inputTriple.getSubjectURI(), inputTriple.getSubjectLabel(), null, false, false);
                 //predicate
@@ -287,7 +287,7 @@ public class DataWebResultFinder {
 
             //check cache content
             if (isTimeToCacheAgain(inputTriple.getSubjectURI())) {
-                System.out.println(":: please be patient, we need to cache the everything for this URI...");
+                System.out.println(" -> please be patient, we need to cache the everything for this URI...");
                 st1 = System.currentTimeMillis();
 
                 uris = cacheURIs(inputTriple.getSubjectURI());
@@ -295,7 +295,7 @@ public class DataWebResultFinder {
                 dp1 = System.currentTimeMillis() - st1;
 
             } else {
-                System.out.println(":: good! we have everything cached! starting querying...");
+                System.out.println(" -> good! we have everything cached! starting querying...");
                 st2 = System.currentTimeMillis();
                 uris = getCachedSameAsURIs(inputTriple.getSubjectURI());
                 dp2 = System.currentTimeMillis() - st2;

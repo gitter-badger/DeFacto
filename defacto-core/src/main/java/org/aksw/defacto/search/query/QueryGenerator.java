@@ -21,6 +21,7 @@ public class QueryGenerator {
 
     public static final BoaPatternSearcher patternSearcher = new BoaPatternSearcher();
     private static final Logger LOGGER = LoggerFactory.getLogger(QueryGenerator.class);
+    public static org.apache.log4j.Logger LOGDEV    = org.apache.log4j.Logger.getLogger("developer");
     private DefactoModel model;
     
     /**
@@ -70,7 +71,6 @@ public class QueryGenerator {
      * @return
      */
     public Map<Pattern,MetaQuery> getSearchEngineQueries(String language){
-        // and generate the query strings 
         return this.generateSearchQueries(model.getFact(), language);
     }
 
@@ -82,20 +82,20 @@ public class QueryGenerator {
      * @return
      */
     private Map<Pattern,MetaQuery> generateSearchQueries(Statement fact, String language){
-     
+
         Map<Pattern,MetaQuery> queryStrings =  new HashMap<>();
         String subjectLabel = model.getSubjectLabelNoFallBack(language);//.replaceAll("\\(.+?\\)", "").trim(); 
         String objectLabel  = model.getObjectLabelNoFallBack(language);//.replaceAll("\\(.+?\\)", "").trim();
         
         // we dont have labels in the given language so we generate a foreign query with english labels
         if ( subjectLabel.equals(Constants.NO_LABEL) || objectLabel.equals(Constants.NO_LABEL) ) {
-        	
         	subjectLabel = model.getSubjectLabel("en");
         	objectLabel = model.getObjectLabel("en");
         }
         
         // TODO
         // query boa index and generate the meta queries
+        int i =0;
         for (Pattern pattern : patternSearcher.getNaturalLanguageRepresentations(fact.getPredicate().getURI(), language)) {
         	
         	if ( !pattern.getNormalized().trim().isEmpty() ) {
@@ -103,12 +103,19 @@ public class QueryGenerator {
         		MetaQuery metaQuery = new MetaQuery(subjectLabel, pattern.getNormalized(), objectLabel, language, null);
         		System.out.println(metaQuery);
         		queryStrings.put(pattern, metaQuery);
+
+                LOGDEV.debug(" " + i + " pattern norm = [" + pattern.getNormalized() + "] metaquery: " +
+                        " s = [" + metaQuery.getSubjectLabel() +
+                        "] p = [" + metaQuery.getPropertyLabel() +
+                        "] o = [" + metaQuery.getObjectLabel() + "]");
+
         	}
+            i++;
         }
         
         // add one query without any predicate
-        queryStrings.put(new Pattern("??? NONE ???", language), new MetaQuery(subjectLabel, "??? NONE ???", objectLabel, language, null));        
-        LOGGER.debug(String.format("Generated %s queries for fact ('%s'): %s", queryStrings.size(), language, fact.asTriple()));
+        queryStrings.put(new Pattern("??? NONE ???", language), new MetaQuery(subjectLabel, "??? NONE ???", objectLabel, language, null));
+        LOGDEV.debug(String.format(" -> Generated %s queries for fact ('%s'): %s", queryStrings.size(), language, fact.asTriple()));
         
         return queryStrings;
     }

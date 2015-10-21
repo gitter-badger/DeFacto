@@ -22,6 +22,7 @@ import com.hp.hpl.jena.rdf.model.Model;
 import com.hp.hpl.jena.rdf.model.ModelFactory;
 import com.hp.hpl.jena.rdf.model.Resource;
 import com.hp.hpl.jena.vocabulary.RDFS;
+import org.joda.time.Period;
 import org.json.JSONObject;
 import org.slf4j.LoggerFactory;
 
@@ -34,6 +35,7 @@ import org.slf4j.LoggerFactory;
 public class DefactoDemo {
 
     public static Logger LOG       = LogManager.getLogger(DefactoDemo.class);
+    public static Logger LOGDEV    = Logger.getLogger("developer");
     /**
      * @param args
      * @throws IOException 
@@ -42,20 +44,31 @@ public class DefactoDemo {
     public static void main(String[] args) throws InvalidFileFormatException, IOException {
 
         try{
-            System.out.println("DeFacto: starting the demonstration process");
 
-            final Calendar startTime = Calendar.getInstance();
-            LOG.info(startTime);
+            LOGDEV.debug("************************************************************************");
+            LOGDEV.debug("*                         starting defacto                             *");
+            LOGDEV.debug("************************************************************************");
+
+            long startTime = System.currentTimeMillis();
+            LOGDEV.debug(startTime);
             final Evidence evidence = Defacto.checkFact(getOneExample(), TIME_DISTRIBUTION_ONLY.NO);
-            final Calendar endTime = Calendar.getInstance();
-            LOG.info(endTime);
+            long endTime   = System.currentTimeMillis();
+            long totalTime = endTime - startTime;
 
-            System.out.println("DeFacto: Overall score: " + evidence.getDeFactoScore());
-            System.out.println("DeFacto: Overall counterargument score: " + evidence.getDeFactoCounterargumentScore());
+            LOGDEV.debug("************************************************************************");
+            LOGDEV.debug("*                   process finished - statistics                      *");
+            LOGDEV.debug("************************************************************************");
 
-            List<WebSite> allWebSites = evidence.getAllWebSites();
+            LOGDEV.debug("time process: " + ((totalTime / 1000) * 60) + "min");
+            LOGDEV.debug("overall score: " + evidence.getDeFactoScore());
+            LOGDEV.debug("overall counterargument score: " + evidence.getDeFactoCounterargumentScore());
 
-            System.out.println("All websites");
+
+
+
+            /*List<WebSite> allWebSites = evidence.getAllWebSites();
+
+             System.out.println("All websites");
             for (WebSite w: allWebSites){
                 System.out.println(w.getUrl());
             }
@@ -84,10 +97,10 @@ public class DefactoDemo {
                     System.out.println(website.getUrl());
                 }
             }
-            
+
             System.out.println("********************************************************************");
 
-
+            */
 
         }catch (Exception e){
             System.out.println("Error: " + e.toString());

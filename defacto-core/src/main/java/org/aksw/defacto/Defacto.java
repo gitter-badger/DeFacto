@@ -54,6 +54,7 @@ public class Defacto {
     public static TIME_DISTRIBUTION_ONLY onlyTimes;
     
     private static final Logger LOGGER = LoggerFactory.getLogger(Defacto.class);
+    public static org.apache.log4j.Logger LOGDEV    = org.apache.log4j.Logger.getLogger("developer");
     private static final boolean searchCounterargument = true;
     private static boolean foundCounterargument = true;
     
@@ -69,28 +70,25 @@ public class Defacto {
     	init();
     	LOGGER.info("Checking fact: " + model);
     	Defacto.onlyTimes = onlyTimes;
-    	
-    	// hack to get surface forms before timing
-    	// not needed anymore, since surfaceforms are inside model
-    	// SubjectObjectFactSearcher.getInstance();
-    	// not needed anymore since we do not use NER tagging
-    	// NlpModelManager.getInstance();
 
         /*********************************************************************************************************************
          [1] generate the search engine queries
          *********************************************************************************************************************/
 
+        LOGDEV.debug("[1] -> starting generating the search engines queries");
+
         long start = System.currentTimeMillis();
         QueryGenerator queryGenerator = new QueryGenerator(model);
-
-        // generate the counter arguments search engine queries
         Map<Pattern,MetaQuery> queries = new HashMap<>();
         for ( String language : model.languages ) {
             Map<Pattern,MetaQuery> q = queryGenerator.getSearchEngineQueries(language);
             queries.putAll(q);
         }
-        if ( queries.size() <= 0 ) return new Evidence(model); 
-        LOGGER.info("Preparing queries took " + TimeUtil.formatTime(System.currentTimeMillis() - start));
+        if ( queries.size() <= 0 ) {
+            LOGDEV.debug("none query has been generated for the model!");
+            return new Evidence(model);
+        }
+        LOGDEV.debug("-> Preparing queries took " + TimeUtil.formatTime(System.currentTimeMillis() - start));
 
         Map<Pattern, MetaQuery> queries2 = new HashMap<>();
         if (searchCounterargument) {
@@ -107,6 +105,8 @@ public class Defacto {
          [2] download the search results in parallel
         *********************************************************************************************************************/
 
+        LOGDEV.debug("[2] -> downloading the search results in parallel");
+
         // crawl evidence using a defined search engine designed for a corpora (internet or local corpora)
         SearchEngine engine = new AzureBingSearchEngine();
         //SearchEngine engine2 = new WikiSearchEngine(); //local corpora tests
@@ -115,7 +115,7 @@ public class Defacto {
         long startCrawl = System.currentTimeMillis();
         EvidenceCrawler crawler = new EvidenceCrawler(model, queries);
         Evidence evidence = crawler.crawlEvidence(engine);
-        LOGGER.info("Crawling evidence took " + TimeUtil.formatTime(System.currentTimeMillis() - startCrawl));
+        LOGDEV.debug(" -> crawling evidence took " + TimeUtil.formatTime(System.currentTimeMillis() - startCrawl));
 
         Evidence evidence2;
         if (searchCounterargument) {
@@ -137,8 +137,15 @@ public class Defacto {
         if ( onlyTimes.equals(TIME_DISTRIBUTION_ONLY.YES) ) return evidence;
 
         /*********************************************************************************************************************
+         [1] extracting structured linked data content
+         *********************************************************************************************************************/
+
+
+        /*********************************************************************************************************************
          [3] confirm the facts
          *********************************************************************************************************************/
+
+        LOGDEV.debug("[3] -> confirming the facts");
 
         long startFactConfirmation = System.currentTimeMillis();
         FactFeatureExtraction factFeatureExtraction = new FactFeatureExtraction();
@@ -157,6 +164,8 @@ public class Defacto {
          [4] score the facts
          *********************************************************************************************************************/
 
+        LOGDEV.debug("[3] -> scoring the facts");
+
         // score the facts
         long startFactScoring = System.currentTimeMillis();
         FactScorer factScorer = new FactScorer();
@@ -173,6 +182,8 @@ public class Defacto {
          [5] calculate the factFeatures for the model
          *********************************************************************************************************************/
 
+        LOGDEV.debug("[3] -> computing the fact features");
+
     	// calculate the factFeatures for the model
         long startFeatureExtraction = System.currentTimeMillis();
         EvidenceFeatureExtractor featureCalculator = new EvidenceFeatureExtractor();
@@ -188,6 +199,10 @@ public class Defacto {
 
 
         if ( !Defacto.DEFACTO_CONFIG.getBooleanSetting("settings", "TRAINING_MODE") ) {
+
+            /*********************************************************************************************************************
+             [6] score the evidences
+             *********************************************************************************************************************/
 
             long startScoring = System.currentTimeMillis();
             EvidenceScorer scorer = new EvidenceScorer();
