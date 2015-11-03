@@ -1,9 +1,9 @@
 package org.aksw.defacto.search.query;
 
+import org.aksw.defacto.topic.frequency.Word;
+
 import java.util.ArrayList;
 import java.util.List;
-
-import org.aksw.defacto.topic.frequency.Word;
 
 
 public class MetaQuery {
@@ -13,6 +13,12 @@ public class MetaQuery {
     public String objectLabel;
     private List<Word> topicTerms;
 	private String language;
+
+    private int penalizesDifDomOnDR_Rel = 0;
+    private int penalizesDifRanOnDR_Rel = 0;
+
+    private double penalizeFactorDifDomOnDR_Rel = 0.0;
+    private double penalizeFactorDifRanOnDR_Rel = 0.0;
 
     /**
      * 
@@ -30,7 +36,21 @@ public class MetaQuery {
         this.language		= language;
         this.topicTerms     = topicTerms != null ? topicTerms : new ArrayList<Word>();
     }
-    
+
+    public MetaQuery(String subjectLabel, String propertyLabel, String objectLabel, String language, List<Word> topicTerms,
+                     int penalizesDifDomOnDR, int penalizesDifRanOnDR, double penalizeFactorDifDomOnDR, double penalizeFactorDifRanOnDR) {
+
+        this.subjectLabel   = subjectLabel;
+        this.propertyLabel  = propertyLabel;
+        this.objectLabel    = objectLabel;
+        this.language		= language;
+        this.topicTerms     = topicTerms != null ? topicTerms : new ArrayList<Word>();
+        this.penalizesDifDomOnDR_Rel = penalizesDifDomOnDR;
+        this.penalizesDifRanOnDR_Rel = penalizesDifRanOnDR;
+        this.penalizeFactorDifDomOnDR_Rel = penalizeFactorDifDomOnDR; //factor of penalization (directly related to functional property)
+        this.penalizeFactorDifRanOnDR_Rel = penalizeFactorDifRanOnDR; //factor of penalization (directly related to functional property)
+    }
+
     public MetaQuery(String metaQuery) {
 
         String[] parts      = metaQuery.split("\\|-\\|");
