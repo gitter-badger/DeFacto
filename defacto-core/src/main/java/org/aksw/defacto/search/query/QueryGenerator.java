@@ -43,18 +43,81 @@ public class QueryGenerator {
         String subjectLabel = model.getSubjectLabelNoFallBack(language);
         String objectLabel  = model.getObjectLabelNoFallBack(language);
 
+        //just for english
+        if (!language.equals("en")) return null;
+
         // we dont have labels in the given language so we generate a foreign query with english labels
         if ( subjectLabel.equals(Constants.NO_LABEL) || objectLabel.equals(Constants.NO_LABEL) ) {
             subjectLabel = model.getSubjectLabel("en");
             objectLabel = model.getObjectLabel("en");
         }
+
         for (Pattern pattern : patternSearcher.getInverseNaturalLanguageRepresentations(fact.getPredicate().getURI(), language)) {
 
             if ( !pattern.getNormalized().trim().isEmpty() ) {
 
-                MetaQuery metaQuery = new MetaQuery(subjectLabel, pattern.getNormalized(), objectLabel, language, null);
-                System.out.println(metaQuery);
-                counterqueryStrings.put(pattern, metaQuery);
+                //defining rules for each predicate
+
+                MetaQuery metaQuery;
+                try{
+
+                    //penalizes dif Subject on D-R, Subject on R-D, Object on D-R, Object on R-D
+
+                    switch (model.getPropertyUri()) {
+                        case "http://dbpedia.org/ontology/award":
+                            //try to extract NER = person whom could had received the award
+                            metaQuery = new MetaQuery(subjectLabel, pattern.getNormalized(), objectLabel, language, null, 1, 1, 0.25, 0.25);
+                            break;
+                        case "http://dbpedia.org/ontology/birthDate":
+                            //look for date pattern. A different objectLabel (birth date) should be penalized
+                            metaQuery = new MetaQuery(subjectLabel, pattern.getNormalized(), objectLabel, language, null, 0, 1, 0.0, 1.0);
+                            break;
+                        case "http://dbpedia.org/ontology/deathPlace":
+                            //look for NER = place
+                            metaQuery = new MetaQuery(subjectLabel, pattern.getNormalized(), objectLabel, language, null, 0, 1, 0.0, 1.0);
+                            break;
+                        case "http://dbpedia.org/ontology/foundationPlace":
+                            //look for NER = place
+                            metaQuery = new MetaQuery(subjectLabel, pattern.getNormalized(), objectLabel, language, null, 0, 1, 0.0, 1.0);
+                            break;
+                        case "http://dbpedia.org/ontology/leaderName":
+                            //look for NER = place
+                            metaQuery = new MetaQuery(subjectLabel, pattern.getNormalized(), objectLabel, language, null, 1, 1, 0.25, 0.75);
+                            break;
+                        case "http://dbpedia.org/ontology/nflTeam":
+                            //look for NER = team
+                            metaQuery = new MetaQuery(subjectLabel, pattern.getNormalized(), objectLabel, language, null, 0, 1, 0.0, 0.95);
+                            break;
+                        //case "http://dbpedia.org/ontology/publicationDate":
+                        case "http://dbpedia.org/ontology/author":
+                            //look for NER = person
+                            metaQuery = new MetaQuery(subjectLabel, pattern.getNormalized(), objectLabel, language, null, 1, 1, 0.20, 0.20);
+                            break;
+                        case "http://dbpedia.org/ontology/spouse":
+                            //look for NER = person
+                            metaQuery = new MetaQuery(subjectLabel, pattern.getNormalized(), objectLabel, language, null, 1, 1, 0.99, 0.99);
+                            break;
+                        case "http://dbpedia.org/ontology/starring":
+                            //look for NER = person
+                            metaQuery = new MetaQuery(subjectLabel, pattern.getNormalized(), objectLabel, language, null, 0, 1, 0.00, 0.05);
+                            break;
+                        case "http://dbpedia.org/ontology/subsidiary":
+                            //look for NER = company O was acquired by S / S acquired O
+                            metaQuery = new MetaQuery(subjectLabel, pattern.getNormalized(), objectLabel, language, null, 1, 1, 0.80, 0.80);
+                            break;
+
+                        default:
+                            throw new Exception("The property " + model.getPropertyUri() + " has not been implemented");
+                    }
+
+                    LOGDEV.debug(metaQuery);
+                    counterqueryStrings.put(pattern, metaQuery);
+
+                }catch (Exception e){
+                   LOGDEV.error(e.toString());
+                }
+
+
             }
         }
 
