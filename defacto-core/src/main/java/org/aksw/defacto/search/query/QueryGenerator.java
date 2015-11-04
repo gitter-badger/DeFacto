@@ -122,7 +122,7 @@ public class QueryGenerator {
         }
 
         // add one query without any predicate
-        counterqueryStrings.put(new Pattern("??? NONE ???", language), new MetaQuery(subjectLabel, "??? NONE ???", objectLabel, language, null));
+        //counterqueryStrings.put(new Pattern("??? NONE ???", language), new MetaQuery(subjectLabel, "??? NONE ???", objectLabel, language, null));
         LOGGER.debug(String.format("Generated %s negated queries for fact ('%s'): %s", counterqueryStrings.size(), language, fact.asTriple()));
 
         return counterqueryStrings;
