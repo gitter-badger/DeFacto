@@ -52,6 +52,7 @@ public class EvidenceCrawler {
     private DefactoModel model;
     
     public Map<DefactoModel,Evidence> evidenceCache = new HashMap<DefactoModel,Evidence>();
+    public Map<DefactoModel,Evidence> counterEvidenceCache = new HashMap<DefactoModel,Evidence>();
     
     /**
      * 
@@ -63,33 +64,40 @@ public class EvidenceCrawler {
         this.model            = model;
     }
 
-    /**
-     * 
-     * @return
-     */
-    public Evidence crawlEvidence(SearchEngine engine) {
-    	
-    	Evidence evidence = null;
 
-        System.out.println("SearchEngineClass: " + engine.getClass().toString());
-    	
-    	if ( !evidenceCache.containsKey(this.model) ) {
-    		
-    		long start = System.currentTimeMillis();
+    private Evidence crawl(SearchEngine engine, Constants.EvidenceType evidenceType) {
+
+        Map<DefactoModel, Evidence> cache;
+        Evidence evidence = null;
+
+        if (evidenceType.equals(Constants.EvidenceType.POS)) {
+            cache = evidenceCache;
+        }else if (evidenceType.equals(Constants.EvidenceType.NEG)) {
+            cache = counterEvidenceCache;
+        }else {
+            LOGDEV.fatal("evidence type value is not valid: " + evidenceType.toString());
+            return null;
+        }
+        
+        LOGDEV.debug("SearchEngineClass: " + engine.getClass().toString());
+
+        if ( !cache.containsKey(this.model) ) {
+
+            long start = System.currentTimeMillis();
             LOGDEV.debug("  start getting search results");
             Set<SearchResult> searchResults = this.generateSearchResultsInParallel(engine);
             LOGDEV.debug("  finished getting search results in " + (System.currentTimeMillis() - start));
-            
+
             // multiple pattern bring the same results but we dont want that
             this.filterSearchResults(searchResults);
 
-            Long totalHitCount = 0L; // sum over the n*m query results        
+            Long totalHitCount = 0L; // sum over the n*m query results
             for ( SearchResult result : searchResults ) {
-            	totalHitCount += result.getTotalHitCount();  
+                totalHitCount += result.getTotalHitCount();
             }
 
             LOGDEV.debug(" total hint count = " + totalHitCount);
-                    
+
             evidence = new Evidence(model, totalHitCount, patternToQueries.keySet());
 
             // basically downloads all websites in parallel
@@ -103,39 +111,62 @@ public class EvidenceCrawler {
             // put it in solr cache
             LOGDEV.debug(" caching search results...");
             cacheSearchResults(searchResults);
-                    
+
             // start multiple threads to download the text of the websites simultaneously
-            for ( SearchResult result : searchResults ) 
+            for ( SearchResult result : searchResults )
                 evidence.addWebSites(result.getPattern(), result.getWebSites());
-            
-            evidenceCache.put(model, evidence);
-    	}
-    	evidence = evidenceCache.get(model);
-    	
+
+            cache.put(model, evidence);
+        }
+        evidence = cache.get(model);
+
         // get the time frame or point
         evidence.calculateDefactoTimePeriod();
-        
+
         long start = System.currentTimeMillis();
         // save all the time we can get
         if ( Defacto.onlyTimes.equals(TIME_DISTRIBUTION_ONLY.NO) ) {
 
-        	for ( String language : model.getLanguages() ) {
-        		
-        		String subjectLabel = evidence.getModel().getSubjectLabel(language);
-        		String objectLabel = evidence.getModel().getObjectLabel(language);
-        		
-        		if ( !subjectLabel.equals(Constants.NO_LABEL) && !objectLabel.equals(Constants.NO_LABEL) ) {
+            for ( String language : model.getLanguages() ) {
 
-        			List<Word> topicTerms = TopicTermExtractor.getTopicTerms(subjectLabel, objectLabel, language, evidence);
-        			evidence.setTopicTerms(language, topicTerms);
-            		evidence.setTopicTermVectorForWebsites(language);
-        		}
-        	}
+                String subjectLabel = evidence.getModel().getSubjectLabel(language);
+                String objectLabel = evidence.getModel().getObjectLabel(language);
+
+                if ( !subjectLabel.equals(Constants.NO_LABEL) && !objectLabel.equals(Constants.NO_LABEL) ) {
+
+                    List<Word> topicTerms = TopicTermExtractor.getTopicTerms(subjectLabel, objectLabel, language, evidence);
+                    evidence.setTopicTerms(language, topicTerms);
+                    evidence.setTopicTermVectorForWebsites(language);
+                }
+            }
             evidence.calculateSimilarityMatrix();
         }
         LOGGER.info(String.format("  -> Extraction of topic terms took %s", TimeUtil.formatTime(System.currentTimeMillis() - start)));
-        
+
         return evidence;
+
+
+    }
+
+    public Evidence crawlCounterEvidence(SearchEngine engine) {
+
+        LOGDEV.info("::crawlCounterEvidence() -> starting");
+        Evidence ret =  crawl(engine, Constants.EvidenceType.NEG);
+        LOGDEV.info("::crawlCounterEvidence() -> finish");
+        return ret;
+    }
+
+    /**
+     * 
+     * @return
+     */
+    public Evidence crawlEvidence(SearchEngine engine) {
+
+        LOGDEV.info("::crawlEvidence() -> starting");
+        Evidence ret =  crawl(engine, Constants.EvidenceType.POS);
+        LOGDEV.info("::crawlEvidence() -> finish");
+        return ret;
+
     }
     
     /**

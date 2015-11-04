@@ -3,18 +3,20 @@
  */
 package org.aksw.defacto;
 
+import com.hp.hpl.jena.rdf.model.Property;
+import com.hp.hpl.jena.rdf.model.ResourceFactory;
+
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
-
-import com.hp.hpl.jena.rdf.model.Property;
-import com.hp.hpl.jena.rdf.model.ResourceFactory;
 
 /**
  * @author gerb
  *
  */
 public class Constants {
+
+	public enum EvidenceType {POS, NEG}; //pos -> positive claims / neg -> possible claims that could refute the pos ones
 
 	/* esteves: adding indexed wikipedia */
 	public static final String LUCENE_WIKI_PAGEID_FIELD				= "id";
