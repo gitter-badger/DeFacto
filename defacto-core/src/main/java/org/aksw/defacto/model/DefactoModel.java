@@ -41,6 +41,7 @@ public class DefactoModel {
     public DefactoResource object;
     public DefactoTimePeriod timePeriod = new DefactoTimePeriod("", "");
     public List<String> languages = new ArrayList<String>();
+	public Constants.EvidenceType evidenceType;
     
     /**
      * Creates a new Defacto Model. This is a wrapper around a jena model. But with
@@ -228,8 +229,13 @@ public class DefactoModel {
 		if (timePeriod == null) {
 			if (other.timePeriod != null)
 				return false;
-		} else if (!timePeriod.equals(other.timePeriod))
+        } else if (!timePeriod.equals(other.timePeriod))
 			return false;
+        if (evidenceType == null) {
+            if (other.evidenceType != null)
+                return false;
+        } else if (!evidenceType.equals(other.evidenceType))
+            return false;
 		return true;
 	}
 
@@ -431,4 +437,9 @@ public class DefactoModel {
 		
 		return null;
 	}
+
+	public Constants.EvidenceType getEvidenceType(){
+		return this.evidenceType;
+	}
+
 }
