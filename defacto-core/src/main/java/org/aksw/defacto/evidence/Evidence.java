@@ -11,6 +11,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
+import org.aksw.defacto.Constants;
 import org.aksw.defacto.Defacto;
 import org.aksw.defacto.boa.Pattern;
 import org.aksw.defacto.ml.feature.evidence.AbstractEvidenceFeature;
@@ -31,10 +32,12 @@ import weka.core.Instance;
 /**
  * 
  * @author Daniel Gerber <dgerber@informatik.uni-leipzig.de>
+ * @author Diego Esteves <esteves@informatik.uni-leipzig.de>
  */
 public class Evidence {
 
-    private Evidence negative;
+    private Constants.EvidenceType evidenceType; //defines the type of given evidence instance (POS or NEG)
+    private Evidence negative; //a link for a counter evidence (NEG)
     private DefactoModel model;
     private Map<Pattern,List<WebSite>> webSites         = new LinkedHashMap<Pattern,List<WebSite>>();
     private Map<String,List<Word>> topicTerms           = new HashMap<String,List<Word>>();
@@ -75,6 +78,7 @@ public class Evidence {
         this.model              = model;
         this.totalHitCount      = totalHitCount;
         this.complexProofs      = new HashSet<ComplexProof>();
+        this.evidenceType = Constants.EvidenceType.POS;
         
         boaPatterns.put("de", new ArrayList<Pattern>());
         boaPatterns.put("fr", new ArrayList<Pattern>());
@@ -88,6 +92,7 @@ public class Evidence {
         this.model              = model;
         this.totalHitCount      = 0L;
         this.complexProofs      = new HashSet<ComplexProof>();
+        this.evidenceType = Constants.EvidenceType.POS;
     }
     
     /**
@@ -105,8 +110,13 @@ public class Evidence {
         return features;
     }
 
+    public void setEvidenceType(Constants.EvidenceType type){
+        this.evidenceType = type;
+    }
+
     public void setNegativeEvidenceObject(Evidence e){
         this.negative = e;
+        this.negative.setEvidenceType(Constants.EvidenceType.NEG);
     }
     public Evidence getNegativeEvidenceObject(){
         return this.negative;
