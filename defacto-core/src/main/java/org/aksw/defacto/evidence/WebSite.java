@@ -1,16 +1,12 @@
 package org.aksw.defacto.evidence;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-
 import org.aksw.defacto.Defacto;
-import org.aksw.defacto.search.cache.solr.TopicTermSolr4Cache;
+import org.aksw.defacto.boa.Pattern;
 import org.aksw.defacto.search.query.MetaQuery;
 import org.aksw.defacto.topic.frequency.Word;
 import org.apache.commons.lang.StringUtils;
+
+import java.util.*;
 
 
 public class WebSite {
@@ -75,6 +71,11 @@ public class WebSite {
     public double getScore() {
 
         return this.score;
+    }
+
+
+    public Pattern getPattern(){
+        return this.query.getPattern();
     }
 
     /**
