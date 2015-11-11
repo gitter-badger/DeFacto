@@ -345,6 +345,15 @@ public class Evidence {
             if ( proof.getWebSite().equals(website)) proofs.add(proof);
         return proofs;
     }
+
+    public List<ComplexProof> getComplexProofsAtLeastOneBOAPatternInBetween(WebSite website){
+        List<ComplexProof> proofs = new ArrayList<ComplexProof>();
+        for ( ComplexProof proof : this.complexProofs )
+            if ( proof.getWebSite().equals(website) && proof.getHasPatternInBetween()) {
+                proofs.add(proof);
+            }
+        return proofs;
+    }
     
     public List<WebSite> getAllWebSites(){
         boolean returnWebsitesWithNoProof = Defacto.DEFACTO_CONFIG.getBooleanSetting("evidence", "DISPLAY_WEBSITES_WITH_NO_PROOF");
@@ -357,6 +366,27 @@ public class Evidence {
                 else if(returnWebsitesWithNoProof)
                     websites.add(website);
 //            websites.addAll(websiteList);
+            }
+        }
+        return websites;
+    }
+
+    /**
+     * get all websites which have at least 1 proof with BOA pattern between S and O,
+     * @return
+     */
+    public List<WebSite> getAllWebSitesWithComplexProofAndAtLeastOneBOAPatternInBetween(){
+
+        List<WebSite> websites = new ArrayList<>();
+        for ( List<WebSite> websiteList : this.webSites.values() ){
+            for(WebSite website:websiteList){
+                outerloop:
+                for(ComplexProof proof : this.getComplexProofs(website)){
+                    if (proof.getHasPatternInBetween()){
+                        websites.add(website);
+                        break outerloop;
+                    }
+                }
             }
         }
         return websites;
