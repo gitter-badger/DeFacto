@@ -1,14 +1,10 @@
 package org.aksw.defacto.search.engine.bing;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import net.billylieurance.azuresearch.AbstractAzureSearchQuery.AZURESEARCH_QUERYTYPE;
 import net.billylieurance.azuresearch.AbstractAzureSearchResult;
 import net.billylieurance.azuresearch.AzureSearchCompositeQuery;
 import net.billylieurance.azuresearch.AzureSearchResultSet;
 import net.billylieurance.azuresearch.AzureSearchWebResult;
-
 import org.aksw.defacto.Defacto;
 import org.aksw.defacto.boa.Pattern;
 import org.aksw.defacto.evidence.WebSite;
@@ -18,6 +14,9 @@ import org.aksw.defacto.search.query.MetaQuery;
 import org.aksw.defacto.search.result.DefaultSearchResult;
 import org.aksw.defacto.search.result.SearchResult;
 import org.apache.log4j.Logger;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Date: 2/6/12
@@ -33,6 +32,7 @@ public class AzureBingSearchEngine extends DefaultSearchEngine {
     private String NUMBER_OF_SEARCH_RESULTS;
     private static String BING_API_KEY;
     private static Logger logger =  Logger.getLogger(AzureBingSearchEngine.class);
+    public static org.apache.log4j.Logger LOGDEV    = org.apache.log4j.Logger.getLogger("developer");
     
     public AzureBingSearchEngine() {
         
@@ -58,7 +58,10 @@ public class AzureBingSearchEngine extends DefaultSearchEngine {
         
         Defacto.init();
 
-        MetaQuery q = new MetaQuery("Guglielmo Marconi|-| not prizewinning |-|Nobel Prize in Physics|-|en");
+        Pattern p = new Pattern();
+        p.naturalLanguageRepresentation = "?D? was not prizewinning ?R?";
+
+        MetaQuery q = new MetaQuery("Guglielmo Marconi|-| not prizewinning |-|Nobel Prize in Physics|-|en", p);
 
         //MetaQuery q = new MetaQuery("Ghostbusters II|-|?D? NONE ?R?|-|Bill Murray|-|fr");
         AzureBingSearchEngine engine = new AzureBingSearchEngine();
@@ -103,8 +106,10 @@ public class AzureBingSearchEngine extends DefaultSearchEngine {
             else aq.setMarket("fr-FR");
             
             aq.setSources(new AZURESEARCH_QUERYTYPE[] { AZURESEARCH_QUERYTYPE.WEB });
-            
-            aq.setQuery(this.generateQuery(query));
+
+            String strQuery = this.generateQuery(query);
+            LOGDEV.debug("BING Query: " + strQuery);
+            aq.setQuery(strQuery);
             System.out.println(this.generateQuery(query));
             aq.doQuery();
             
@@ -139,6 +144,7 @@ public class AzureBingSearchEngine extends DefaultSearchEngine {
     @Override
     public String generateQuery(MetaQuery query) {
 
+        LOGDEV.debug(" -> generateQuery(" + query.toString() + ")");
         return new BingQuery().generateQuery(query);
     }
 
