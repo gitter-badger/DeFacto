@@ -34,6 +34,8 @@ public class Constants {
 	public static final String LUCENE_SEARCH_RESULT_CREATED_FIELD	= "created";
 	public static final String LUCENE_SEARCH_RESULT_TAGGED_FIELD	= "tagged";
 	public static final String LUCENE_SEARCH_RESULT_LANGUAGE		= "language";
+    //pattern suport
+    public static final String LUCENE_SEARCH_RESULT_PATTERN_FIELD		= "query";
 	
 	public static final String LUCENE_TOPIC_TERM_LABEL = "label";
 	public static final String LUCENE_TOPIC_TERM_RELATED_TERM = "related";

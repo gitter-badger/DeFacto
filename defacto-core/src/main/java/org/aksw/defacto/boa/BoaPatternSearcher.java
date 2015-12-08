@@ -33,6 +33,75 @@ public class BoaPatternSearcher {
     private Logger LOGDEV = Logger.getLogger("developer");
 	private Map<String,QueryResponse> queryCache = new HashMap<>();
 
+    /*
+    enamex -> ORGANIZATION, PERSON, LOCATION
+     */
+
+    /*
+    * http://dbpedia.org/ontology/award - ?D = dbo:Person / ?R = dbo:Award
+    */
+    private static String NER_AWARD = "PERSON;?R?";
+    private static String NER_AWARD_INV = "?R?;PERSON";
+
+    /*
+    * http://dbpedia.org/ontology/nflTeam -> ?D = dbo:Athlete / ?R = dbo:SportsTeam
+    */
+    private static String NER_NFLTEAM = "PERSON;ORGANISATION";
+    private static String NER_NFLTEAM_INV = "ORGANISATION;PERSON";
+
+    /*
+    * http://dbpedia.org/ontology/publicationDate -> dataProperty e nao objectProperty
+    * Actually is "work/publication" and not date of publication...
+    * http://dbpedia.org/ontology/publication -> dataProperty ?D = dbo:Person ?R = string
+    */
+    private static String NER_PUBLICATION_DATE = "PERSON;?R?";
+    private static String NER_PUBLICATION_DATE_INV = "?R?;PERSON";
+
+    /*
+    * http://dbpedia.org/ontology/starring -> ?D = dbo:Work ?R = dbo:Actor
+    */
+    private static String NER_STARRING = "?D?;PERSON";
+    private static String NER_STARRING_INV = "PERSON;?D?";
+
+    /*
+    * http://dbpedia.org/ontology/birthDate -> ?D = Person ?R = date
+    * Actually is "birth place" and not birth date
+    * Why not using http://dbpedia.org/ontology/birthPlace instead? -> ?D = dbo:Person ?R = dbo:Place
+    */
+    private static String NER_BIRTH_DATE = "PERSON;LOCATION";
+    private static String NER_BIRTH_DATE_INV = "LOCATION;PERSON";
+
+    /*
+    * http://dbpedia.org/ontology/deathPlace -> ?D = dbo:Person ?R = dbo:Place
+    */
+    private static String NER_DEATH_PLACE = "PERSON;LOCATION";
+    private static String NER_DEATH_PLACE_INV = "LOCATION;PERSON";
+
+    /*
+    * http://dbpedia.org/ontology/foundationPlace -> ?D = dbo:Organisation ?R = dbo:City
+    */
+    private static String NER_FOUNDATION_PLACE = "ORGANISATION;LOCATION";
+    private static String NER_FOUNDATION_PLACE_INV = "LOCATION;ORGANISATION";
+
+    /*
+    * http://dbpedia.org/ontology/leaderName -> ?D = dbo:PopulatedPlace ?R = dbo:Person
+    */
+    private static String NER_LEARDER_NAME = "ORGANISATION;PERSON";
+    private static String NER_LEARDER_NAME_INV = "PERSON;ORGANISATION";
+
+    /*
+    * http://dbpedia.org/ontology/spouse -> ?D = dbo:Person ?R = dbo:Person
+    */
+    private static String NER_SPOUSE = "PERSON;PERSON";
+    private static String NER_SPOUSE_INV = "PERSON;PERSON";
+
+    /*
+    * http://dbpedia.org/ontology/subsidiary -> ?D = dbo:Company ?R dbo:Company
+    */
+    private static String NER_SUBSIDIARY = "ORGANISATION;ORGANISATION";
+    private static String NER_SUBSIDIARY_INV = "ORGANISATION;ORGANISATION";
+
+
     public BoaPatternSearcher(){
 
         enIndex = new HttpSolrServer(Defacto.DEFACTO_CONFIG.getStringSetting("crawl", "solr_boa_en"));
@@ -75,7 +144,10 @@ public class BoaPatternSearcher {
     }
 
     /**
-     * 
+     * It should be added to BOA Index, which supports just "positive" assessments.
+     * In that case, the key should be altered in order to support POS and NEG cases for given URI.
+     * However, since BOA is not maintained anymore, I will avoid extra work.
+     * Moreover, many BOA features are not referenced in DeFacto's project, so let's try to keep it as simple as possible.
      * 
      * @param propertyUri
      * @param numberOfBoaPatterns
@@ -112,6 +184,7 @@ public class BoaPatternSearcher {
                     pattern1.posTags = "VBD RB VBN DT";
                     pattern1.boaScore = 0d;
                     pattern1.language = language;
+                    pattern1.NER = NER_AWARD;
                     patterns.put(pattern1.getNormalized(), pattern1);
 
                     Pattern pattern2 = new Pattern();
@@ -121,6 +194,7 @@ public class BoaPatternSearcher {
                     pattern2.posTags = "RB NN";
                     pattern2.boaScore = 0d;
                     pattern2.language = language;
+                    pattern2.NER = NER_AWARD_INV;
                     patterns.put(pattern2.getNormalized(), pattern2);
 
                     Pattern pattern3 = new Pattern();
@@ -130,6 +204,7 @@ public class BoaPatternSearcher {
                     pattern3.posTags = "NN";
                     pattern3.boaScore = 0d;
                     pattern3.language = language;
+                    pattern3.NER = NER_AWARD_INV;
                     patterns.put(pattern3.getNormalized(), pattern3);
 
                     Pattern pattern4 = new Pattern();
@@ -139,6 +214,7 @@ public class BoaPatternSearcher {
                     pattern4.posTags = "VBD RB VB";
                     pattern4.boaScore = 0d;
                     pattern4.language = language;
+                    pattern4.NER = NER_AWARD;
                     patterns.put(pattern4.getNormalized(), pattern4);
 
                     Pattern pattern5 = new Pattern();
@@ -148,6 +224,7 @@ public class BoaPatternSearcher {
                     pattern5.posTags = "VBD RB VB";
                     pattern5.boaScore = 0d;
                     pattern5.language = language;
+                    pattern5.NER = NER_AWARD;
                     patterns.put(pattern5.getNormalized(), pattern5);
 
                     Pattern pattern6 = new Pattern();
@@ -157,6 +234,7 @@ public class BoaPatternSearcher {
                     pattern6.posTags = "VB DT";
                     pattern6.boaScore = 0d;
                     pattern6.language = language;
+                    pattern6.NER = NER_AWARD;
                     patterns.put(pattern6.getNormalized(), pattern6);
 
                     Pattern pattern7 = new Pattern();
@@ -166,6 +244,7 @@ public class BoaPatternSearcher {
                     pattern7.posTags = "VBD DT";
                     pattern7.boaScore = 0d;
                     pattern7.language = language;
+                    pattern7.NER = NER_AWARD;
                     patterns.put(pattern7.getNormalized(), pattern7);
 
                     Pattern pattern8 = new Pattern();
@@ -175,6 +254,7 @@ public class BoaPatternSearcher {
                     pattern8.posTags = "VBD RB VBG";
                     pattern8.boaScore = 0d;
                     pattern8.language = language;
+                    pattern8.NER = NER_AWARD;
                     patterns.put(pattern8.getNormalized(), pattern8);
 
                     Pattern pattern9 = new Pattern();
@@ -184,6 +264,7 @@ public class BoaPatternSearcher {
                     pattern9.posTags = "VBD RB DT JJ IN";
                     pattern9.boaScore = 0d;
                     pattern9.language = language;
+                    pattern9.NER = NER_AWARD_INV;
                     patterns.put(pattern9.getNormalized(), pattern9);
 
                     Pattern pattern10 = new Pattern();
@@ -193,6 +274,7 @@ public class BoaPatternSearcher {
                     pattern10.posTags = "NNS";
                     pattern10.boaScore = 0d;
                     pattern10.language = language;
+                    pattern10.NER = NER_AWARD_INV;
                     patterns.put(pattern10.getNormalized(), pattern10);
 
                 }
@@ -211,6 +293,7 @@ public class BoaPatternSearcher {
             } else if (propertyUri.equals("http://dbpedia.org/ontology/subsidiary")) {
 
             }
+
 
         }
         catch (Exception e){
