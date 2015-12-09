@@ -63,6 +63,12 @@ public class Evidence {
 	public List<Match> dates = new ArrayList<Match>();
 	public DefactoTimePeriod defactoTimePeriod;
 	public PatternTimePeriodSearcher tsSearcher = new PatternTimePeriodSearcher();
+
+    //stats
+    private int totalOfReturnedWebsites = 0;
+    private int totalOfComplexProofsLevel1 = 0;
+    private int totalOfComplexProofsLevel2 = 0;
+    private int totalOfComplexProofsLevel3 = 0;
 	
     
     /**
@@ -346,7 +352,7 @@ public class Evidence {
         return proofs;
     }
 
-    public List<ComplexProof> getComplexProofsAtLeastOneBOAPatternInBetween(WebSite website){
+    public List<ComplexProof> getComplexProofsPInBetween(WebSite website){
         List<ComplexProof> proofs = new ArrayList<ComplexProof>();
         for ( ComplexProof proof : this.complexProofs )
             if ( proof.getWebSite().equals(website) && proof.getHasPatternInBetween()) {
@@ -354,6 +360,27 @@ public class Evidence {
             }
         return proofs;
     }
+
+    public List<ComplexProof> getComplexProofsPInBetween(){
+        List<ComplexProof> proofs = new ArrayList<ComplexProof>();
+        for ( ComplexProof proof : this.complexProofs )
+            if ( proof.getHasPatternInBetween()) {
+                proofs.add(proof);
+            }
+        return proofs;
+    }
+
+    public List<ComplexProof> getComplexProofsPInBetween(Pattern p){
+        List<ComplexProof> proofs = new ArrayList<ComplexProof>();
+        for ( ComplexProof proof : this.complexProofs )
+        if (proof.getPattern().equals(p)){
+            if ( proof.getHasPatternInBetween()) {
+                proofs.add(proof);
+            }
+        }
+        return proofs;
+    }
+
     
     public List<WebSite> getAllWebSites(){
         boolean returnWebsitesWithNoProof = Defacto.DEFACTO_CONFIG.getBooleanSetting("evidence", "DISPLAY_WEBSITES_WITH_NO_PROOF");
@@ -454,4 +481,6 @@ public class Evidence {
 		
 		if ( this.defactoTimePeriod == null ) this.defactoTimePeriod = new DefactoTimePeriod(0,0);
 	}
+
+
 }
