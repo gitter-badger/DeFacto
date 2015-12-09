@@ -3,13 +3,13 @@
  */
 package org.aksw.defacto.search.concurrent;
 
-import java.util.concurrent.Callable;
-
 import org.aksw.defacto.evidence.ComplexProof;
 import org.aksw.defacto.nlp.ner.RegexTagger;
 import org.aksw.defacto.util.NlpUtil;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.log4j.Logger;
+
+import java.util.concurrent.Callable;
 
 
 /**
@@ -32,16 +32,16 @@ public class RegexParseCallable implements Callable<ComplexProof>, ParseCallable
 		
 //		for ( ComplexProof proof : this.proofs ) {
 			
-			String merged = StringUtils.join(NlpUtil.mergeConsecutiveNerTags(dateTagger.getAnnotatedSentences(proof.getLargeContext())), "-=-");
+			String merged = StringUtils.join(NlpUtil.mergeConsecutiveNerTags(dateTagger.getAnnotatedDateSentences(proof.getLargeContext())), "-=-");
 			proof.setTaggedLargeContext(merged);
 			
-			merged = StringUtils.join(NlpUtil.mergeConsecutiveNerTags(dateTagger.getAnnotatedSentences(proof.getMediumContext())), "-=-");
+			merged = StringUtils.join(NlpUtil.mergeConsecutiveNerTags(dateTagger.getAnnotatedDateSentences(proof.getMediumContext())), "-=-");
 			proof.setTaggedMediumContext(merged);
 			
-			merged = StringUtils.join(NlpUtil.mergeConsecutiveNerTags(dateTagger.getAnnotatedSentences(proof.getSmallContext())), "-=-");
+			merged = StringUtils.join(NlpUtil.mergeConsecutiveNerTags(dateTagger.getAnnotatedDateSentences(proof.getSmallContext())), "-=-");
 			proof.setTaggedSmallContext(merged);
 			
-			merged = StringUtils.join(NlpUtil.mergeConsecutiveNerTags(dateTagger.getAnnotatedSentences(proof.getTinyContext())), "-=-");
+			merged = StringUtils.join(NlpUtil.mergeConsecutiveNerTags(dateTagger.getAnnotatedDateSentences(proof.getTinyContext())), "-=-");
 			proof.setTaggedTinyContext(merged);
 //		}
 		
