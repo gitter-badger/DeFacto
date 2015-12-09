@@ -66,44 +66,44 @@ public class QueryGenerator {
                     switch (model.getPropertyUri()) {
                         case "http://dbpedia.org/ontology/award":
                             //try to extract NER = person whom could had received the award
-                            metaQuery = new MetaQuery(subjectLabel, pattern.getNormalized(), objectLabel, language, null, 1, 1, 0.25, 0.25);
+                            metaQuery = new MetaQuery(subjectLabel, pattern.getNormalized(), objectLabel, language, null, 1, 1, 0.25, 0.25, pattern);
                             break;
                         case "http://dbpedia.org/ontology/birthDate":
                             //look for date pattern. A different objectLabel (birth date) should be penalized
-                            metaQuery = new MetaQuery(subjectLabel, pattern.getNormalized(), objectLabel, language, null, 0, 1, 0.0, 1.0);
+                            metaQuery = new MetaQuery(subjectLabel, pattern.getNormalized(), objectLabel, language, null, 0, 1, 0.0, 1.0, pattern);
                             break;
                         case "http://dbpedia.org/ontology/deathPlace":
                             //look for NER = place
-                            metaQuery = new MetaQuery(subjectLabel, pattern.getNormalized(), objectLabel, language, null, 0, 1, 0.0, 1.0);
+                            metaQuery = new MetaQuery(subjectLabel, pattern.getNormalized(), objectLabel, language, null, 0, 1, 0.0, 1.0, pattern);
                             break;
                         case "http://dbpedia.org/ontology/foundationPlace":
                             //look for NER = place
-                            metaQuery = new MetaQuery(subjectLabel, pattern.getNormalized(), objectLabel, language, null, 0, 1, 0.0, 1.0);
+                            metaQuery = new MetaQuery(subjectLabel, pattern.getNormalized(), objectLabel, language, null, 0, 1, 0.0, 1.0, pattern);
                             break;
                         case "http://dbpedia.org/ontology/leaderName":
                             //look for NER = place
-                            metaQuery = new MetaQuery(subjectLabel, pattern.getNormalized(), objectLabel, language, null, 1, 1, 0.25, 0.75);
+                            metaQuery = new MetaQuery(subjectLabel, pattern.getNormalized(), objectLabel, language, null, 1, 1, 0.25, 0.75, pattern);
                             break;
                         case "http://dbpedia.org/ontology/nflTeam":
                             //look for NER = team
-                            metaQuery = new MetaQuery(subjectLabel, pattern.getNormalized(), objectLabel, language, null, 0, 1, 0.0, 0.95);
+                            metaQuery = new MetaQuery(subjectLabel, pattern.getNormalized(), objectLabel, language, null, 0, 1, 0.0, 0.95, pattern);
                             break;
                         //case "http://dbpedia.org/ontology/publicationDate":
                         case "http://dbpedia.org/ontology/author":
                             //look for NER = person
-                            metaQuery = new MetaQuery(subjectLabel, pattern.getNormalized(), objectLabel, language, null, 1, 1, 0.20, 0.20);
+                            metaQuery = new MetaQuery(subjectLabel, pattern.getNormalized(), objectLabel, language, null, 1, 1, 0.20, 0.20, pattern);
                             break;
                         case "http://dbpedia.org/ontology/spouse":
                             //look for NER = person
-                            metaQuery = new MetaQuery(subjectLabel, pattern.getNormalized(), objectLabel, language, null, 1, 1, 0.99, 0.99);
+                            metaQuery = new MetaQuery(subjectLabel, pattern.getNormalized(), objectLabel, language, null, 1, 1, 0.99, 0.99, pattern);
                             break;
                         case "http://dbpedia.org/ontology/starring":
                             //look for NER = person
-                            metaQuery = new MetaQuery(subjectLabel, pattern.getNormalized(), objectLabel, language, null, 0, 1, 0.00, 0.05);
+                            metaQuery = new MetaQuery(subjectLabel, pattern.getNormalized(), objectLabel, language, null, 0, 1, 0.00, 0.05, pattern);
                             break;
                         case "http://dbpedia.org/ontology/subsidiary":
                             //look for NER = company O was acquired by S / S acquired O
-                            metaQuery = new MetaQuery(subjectLabel, pattern.getNormalized(), objectLabel, language, null, 1, 1, 0.80, 0.80);
+                            metaQuery = new MetaQuery(subjectLabel, pattern.getNormalized(), objectLabel, language, null, 1, 1, 0.80, 0.80, pattern);
                             break;
 
                         default:
@@ -163,7 +163,7 @@ public class QueryGenerator {
         	
         	if ( !pattern.getNormalized().trim().isEmpty() ) {
         		
-        		MetaQuery metaQuery = new MetaQuery(subjectLabel, pattern.getNormalized(), objectLabel, language, null);
+        		MetaQuery metaQuery = new MetaQuery(subjectLabel, pattern.getNormalized(), objectLabel, language, null, pattern);
         		System.out.println(metaQuery);
         		queryStrings.put(pattern, metaQuery);
 
@@ -177,7 +177,9 @@ public class QueryGenerator {
         }
         
         // add one query without any predicate
-        queryStrings.put(new Pattern("??? NONE ???", language), new MetaQuery(subjectLabel, "??? NONE ???", objectLabel, language, null));
+        Pattern p = new Pattern("??? NONE ???", language);
+
+        queryStrings.put(p, new MetaQuery(subjectLabel, "??? NONE ???", objectLabel, language, null, p));
         LOGDEV.debug(String.format(" -> Generated %s queries for fact ('%s'): %s", queryStrings.size(), language, fact.asTriple()));
         
         return queryStrings;

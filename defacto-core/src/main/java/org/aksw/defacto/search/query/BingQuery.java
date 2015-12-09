@@ -1,5 +1,8 @@
 package org.aksw.defacto.search.query;
 
+import org.aksw.defacto.Constants;
+import org.aksw.defacto.boa.Pattern;
+
 import java.util.ArrayList;
 
 /**
@@ -23,6 +26,8 @@ public class BingQuery implements Query {
     @Override
     public String generateQuery(MetaQuery query) {
 
+        System.out.println("generateQuery()");
+
         String subject  = query.getSubjectLabel().replace("&", "and");
         String property = normalizePredicate(query.getPropertyLabel().trim());
         String object   = query.getObjectLabel().replace("&", "and");
@@ -41,7 +46,7 @@ public class BingQuery implements Query {
                 if (property.equals("NONE")) {
                     queryString = String.format("\"%s\" AND \"%s\"", subject, object);
                 }else {
-                    if (negatedProperty.contains(property)){
+                    if (query.getEvidenceTypeRelation().equals(Constants.EvidenceType.NEG)){
                         queryString = String.format("\"%s\" AND \"%s\" AND norelax:\"%s\"", subject, object, property);
                     }else{
                         queryString = String.format("\"%s\" AND \"%s\" AND \"%s\"", subject, property, object);
@@ -51,17 +56,22 @@ public class BingQuery implements Query {
             }
         }
         else {
-            
-            // this query is going to be exectued from the topic majority web feature
-            queryString = String.format("\"%s\" AND \"%s\" AND \"%s\"", subject, property, object);
-            
+
+            if (query.getEvidenceTypeRelation().equals(Constants.EvidenceType.NEG)){
+                // this query is going to be exectued from the topic majority web feature
+                queryString = String.format("\"%s\" AND \"%s\" AND norelax:\"%s\"", subject, object, property);
+            }else{
+                // this query is going to be exectued from the topic majority web feature
+                queryString = String.format("\"%s\" AND \"%s\" AND \"%s\"", subject, property, object);
+            }
+
             // add the first 3 topic terms to the query
             for ( int i = 0 ; i < 3 && i < query.getTopicTerms().size() ; i++)
                 // use the norelax option here because bing only includes first 4 terms as must contain
                 queryString += " AND norelax:\"" + query.getTopicTerms().get(i).getWord() + "\"";
         }
 
-        LOGDEV.debug("QUERYSTRING: " + queryString);
+        LOGDEV.debug("BING query: " + queryString);
 
         return queryString;
     }
@@ -75,9 +85,11 @@ public class BingQuery implements Query {
     //AQUI: ALTERAR PARA CONSIDERAR NEGATION QUERIES
     public static void main(String[] args) {
 
-        MetaQuery query1 = new MetaQuery("Franck Ribery|-| politician |-|Galatasaray|-|en");
-        MetaQuery query2 = new MetaQuery("Mount Eccles National Park|-|?D? is a stupid ?R?|-|Texas|-|en");
-        MetaQuery query3 = new MetaQuery("Mount Eccles National Park|-|?D? 's is a , ,, , '' stupid ?R?|-|Texas|-|fr");
+        Pattern p = new Pattern();
+
+        MetaQuery query1 = new MetaQuery("Franck Ribery|-| politician |-|Galatasaray|-|en", new Pattern("?D politician ?R"));
+        MetaQuery query2 = new MetaQuery("Mount Eccles National Park|-|?D? is a stupid ?R?|-|Texas|-|en", new Pattern("?D is a stupid ?R"));
+        MetaQuery query3 = new MetaQuery("Mount Eccles National Park|-|?D? 's is a , ,, , '' stupid ?R?|-|Texas|-|fr", new Pattern("?D? 's is a , ,, , '' stupid ?R?"));
         
         BingQuery bq = new BingQuery();
         System.out.println(bq.generateQuery(query1));
