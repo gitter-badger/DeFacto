@@ -44,15 +44,14 @@ public class FOXNamedEntityRecognition {
         Collection<String> persons;
 
         String test = "The philosopher and mathematician Leibniz was born in Leipzig";
-        FOXNamedEntityRecognition t  = new FOXNamedEntityRecognition();
         Multimap<String, String> map;
 
+        FOXNamedEntityRecognition t  = new FOXNamedEntityRecognition();
         map = t.getAnnotatedArray(test);
 
-        if (map.containsKey("LOCATION")){
-            locations = map.get("LOCATION");
-            persons = map.get("PERSON");
-        }
+        locations = map.get("LOCATION");
+        persons = map.get("PERSON");
+
 
     }
 
@@ -101,6 +100,8 @@ public class FOXNamedEntityRecognition {
             type : { text | url }
             task : { NER }
             output : { JSON-LD | N-Triples | RDF/{ JSON | XML } | Turtle | TriG | N-Quads}
+            returnHtml: true | false
+            foxlight:
              */
 
             //String url = "http://" + server.host + ":" + server.port;
@@ -116,9 +117,7 @@ public class FOXNamedEntityRecognition {
                     //.put("returnHtml", "false")
                     .put("input", s);
 
-
             LOG.debug("Parameter: " + jo);
-
 
             Response response = Request
                     .Post(url.concat("/call/ner/entities"))
