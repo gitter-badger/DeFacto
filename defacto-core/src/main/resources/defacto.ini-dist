@@ -10,6 +10,18 @@ NUMBER_OF_BOA_PATTERNS = 10
 PATTERN_SCORE_THRESHOLD = 0.5
 languages = de,en,fr
 
+[mysql]
+; database host name
+DB_HOST = localhost
+; database port number
+DB_PORT = 3306
+; database's name
+DB_NAME = dbpedia_metrics
+; database user's name
+DB_USER = user
+; database user's password
+DB_PWD = pass
+
 [local_corpora]
 ; the set of indexed (input) fields
 FIELDS_INPUT = titleText,text
