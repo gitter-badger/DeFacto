@@ -39,23 +39,23 @@ public class DefactoDemo {
 
         try{
 
-            LOG.debug("************************************************************************");
-            LOG.debug("*                         starting defacto                             *");
-            LOG.debug("************************************************************************");
+            LOG.info("************************************************************************");
+            LOG.info("*                         Starting DeFacto                             *");
+            LOG.info("************************************************************************");
 
             long startTime = System.currentTimeMillis();
-            LOG.debug(startTime);
+            LOG.info(startTime);
             final Evidence evidence = Defacto.checkFact(getOneExample(), TIME_DISTRIBUTION_ONLY.NO);
             long endTime   = System.currentTimeMillis();
             long totalTime = endTime - startTime;
 
-            LOG.debug("************************************************************************");
-            LOG.debug("*                   process finished - statistics                      *");
-            LOG.debug("************************************************************************");
+            LOG.info("************************************************************************");
+            LOG.info("*                         Process Finished                             *");
+            LOG.info("************************************************************************");
 
-            LOG.debug("time process: " + ((totalTime / 1000) * 60) + "min");
-            LOG.debug("overall score: " + evidence.getDeFactoScore());
-            LOG.debug("overall counterargument score: " + evidence.getDeFactoCounterargumentScore());
+            LOG.info("DeFacto took " + ((totalTime / 1000) * 60) + "minutes to run");
+            LOG.info("Overall Score: " + evidence.getDeFactoScore());
+            LOG.info("Overall Counterargument Score: " + evidence.getDeFactoCounterargumentScore());
 
 
 
