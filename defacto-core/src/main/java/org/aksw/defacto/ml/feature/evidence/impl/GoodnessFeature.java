@@ -3,11 +3,9 @@
  */
 package org.aksw.defacto.ml.feature.evidence.impl;
 
-import org.aksw.defacto.evidence.ComplexProof;
+import org.aksw.defacto.Defacto;
 import org.aksw.defacto.evidence.Evidence;
 import org.aksw.defacto.ml.feature.evidence.AbstractEvidenceFeature;
-import org.aksw.defacto.ml.feature.fact.AbstractFactFeatures;
-import org.aksw.defacto.ml.feature.fact.FactFeature;
 import org.aksw.sparql.metrics.DatabaseBackedSPARQLEndpointMetrics;
 import org.dllearner.core.owl.Individual;
 import org.dllearner.core.owl.ObjectProperty;
@@ -30,12 +28,16 @@ public class GoodnessFeature extends AbstractEvidenceFeature {
 		
 		try {
 			Class.forName("com.mysql.jdbc.Driver");
-			
-			String dbHost = "localhost";
-			String dbPort = "3306";
-			String database = "dbpedia_metrics";
-			String dbUser = "root";
-            String pw = ""; 
+
+            if (Defacto.DEFACTO_CONFIG == null)
+                Defacto.init();
+
+			String dbHost = Defacto.DEFACTO_CONFIG.getStringSetting("mysql", "DB_HOST");
+			String dbPort = Defacto.DEFACTO_CONFIG.getStringSetting("mysql", "DB_PORT");
+			String database = Defacto.DEFACTO_CONFIG.getStringSetting("mysql", "DB_NAME");
+			String dbUser = Defacto.DEFACTO_CONFIG.getStringSetting("mysql", "DB_USER");
+            String pw = Defacto.DEFACTO_CONFIG.getStringSetting("mysql", "DB_PWD");
+
             Connection conn = DriverManager.getConnection("jdbc:mysql://" + dbHost + ":" + dbPort + "/" + database + "?" + "user=" + dbUser + "&password=" + pw);
 			metric = new DatabaseBackedSPARQLEndpointMetrics(endpoint, "pmi-cache", conn);
 		} catch (ClassNotFoundException e1) {

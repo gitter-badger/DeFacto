@@ -150,14 +150,14 @@ public class Defacto {
         long startFactConfirmation = System.currentTimeMillis();
         FactFeatureExtraction factFeatureExtraction = new FactFeatureExtraction();
         factFeatureExtraction.extractFeatureForFact(evidence);
-        LOGGER.info("Fact feature extraction took " + TimeUtil.formatTime(System.currentTimeMillis() - startFactConfirmation));
+        LOGGER.info("Fact Feature extraction took " + TimeUtil.formatTime(System.currentTimeMillis() - startFactConfirmation));
 
 
         if (searchCounterargument && foundCounterargument) {
             startFactConfirmation = System.currentTimeMillis();
             FactFeatureExtraction factFeatureExtraction2 = new FactFeatureExtraction();
             factFeatureExtraction2.extractFeatureForFact(evidence2);
-            LOGGER.info("Fact feature (counter argument) extraction took " + TimeUtil.formatTime(System.currentTimeMillis() - startFactConfirmation));
+            LOGGER.info("Fact Feature (counterargument) extraction took " + TimeUtil.formatTime(System.currentTimeMillis() - startFactConfirmation));
         }
 
         /*********************************************************************************************************************
@@ -176,7 +176,7 @@ public class Defacto {
             startFactScoring = System.currentTimeMillis();
             FactScorer factScorer2 = new FactScorer();
             factScorer2.scoreEvidence(evidence2);
-            LOGGER.info("Fact Scoring (counterarguments) took " + TimeUtil.formatTime(System.currentTimeMillis() - startFactScoring));
+            LOGGER.info("Fact Scoring (counterargument) took " + TimeUtil.formatTime(System.currentTimeMillis() - startFactScoring));
         }
         /*********************************************************************************************************************
          [5] calculate the factFeatures for the model
@@ -194,7 +194,7 @@ public class Defacto {
             long startFeatureExtraction2 = System.currentTimeMillis();
             EvidenceFeatureExtractor featureCalculator2 = new EvidenceFeatureExtractor();
             featureCalculator2.extractFeatureForEvidence(evidence2);
-            LOGGER.info("Evidence feature extraction (counterargument) took " + TimeUtil.formatTime(System.currentTimeMillis() - startFeatureExtraction2));
+            LOGGER.info("Evidence Feature extraction (counterargument) took " + TimeUtil.formatTime(System.currentTimeMillis() - startFeatureExtraction2));
         }
 
 
