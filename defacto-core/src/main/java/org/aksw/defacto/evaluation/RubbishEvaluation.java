@@ -11,7 +11,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Random;
 
 /**
  * A naive strategy to generate metadata for correct triples x changed ones
@@ -28,7 +31,7 @@ public class RubbishEvaluation {
         //the list of true models
         List<DefactoModel> models = new ArrayList<>();
         //the aux models that will be used to generate different models (changing S) based on the same model
-        List<DefactoModel> modelsAux = new ArrayList<>();
+        List<DefactoModel> modelsRandom = new ArrayList<>();
         //the number of models to be computed
         int nrModelsToCompare = 4;
         //the number of models for each property (folder)
@@ -37,50 +40,74 @@ public class RubbishEvaluation {
         String testDirectory = Defacto.DEFACTO_CONFIG.getStringSetting("eval", "data-directory")
                 + Defacto.DEFACTO_CONFIG.getStringSetting("eval", "test-directory");
 
-        File file = new File(testDirectory + "correct/");
-        String[] propertyFolders = file.list();
+        File files = new File(testDirectory + "correct/");
+        //getting all folders (properties)
+        ArrayList<String> propertyFolders = new ArrayList<>();
+        for(String propertyFolder : files.list()){
+            File temp = new File(propertyFolder);
+            if (temp.isDirectory()){
+                propertyFolders.add(propertyFolder);}
+        }
 
+        //start the process for each property (folder)
         for(String propertyFolder : propertyFolders){
+            File currentFolder = new File(propertyFolder);
 
-            File folder = new File(propertyFolder);
-            if (folder.isDirectory()){
-
-                sizePropertyFolder = folder.listFiles().length;
-                LOGGER.info("Folder: " + propertyFolder + " has " + sizePropertyFolder + " files");
+                sizePropertyFolder = currentFolder.listFiles().length;
+                LOGGER.info("Folder: " + propertyFolder + " contains " + sizePropertyFolder + " models (files)");
 
                 //add all the models which presents functional property then we can deal with exclusions
-                models.addAll(DefactoModelReader.readModels(testDirectory + "correct/" + propertyFolder, true, languages));
-
+                models.addAll(DefactoModelReader.readModels(currentFolder.getAbsolutePath(), true, languages));
 
                 //starting computation for each model
                 for (int i=0; i<models.size(); i++){
 
-                    //get randomly N models
-                    ArrayList<Integer> selectedModelIndexes = getNRandomModelIndexes(nrModelsToCompare, i, sizePropertyFolder);
+                    //this folder will be used to collect new (random) resources
+                    String randomFolder = getRandomProperty(propertyFolders, currentFolder.getName());
 
-                    //this folder will be used to collect new (random) subjects
-                    String folderPropertyToBeSource = getRandomProperty(propertyFolders, folder.getName());
+                    //get inside the selected folder, N models
+                    ArrayList<File> selectedFiles = getNRandomFiles(nrModelsToCompare, randomFolder);
 
                     //add all random selected models
-                    for (int j=0; j<nrModelsToCompare; j++){
-                        modelsAux.add(DefactoModelReader.readModel())
+                    for (int j=0; j<selectedFiles.size(); j++){
+                        modelsRandom.add(DefactoModelReader.readModel(selectedFiles.get(j).getAbsolutePath()));
                     }
 
-                }
+                    //compute the score for main model
+                    LOGGER.info(
+                            Defacto.checkFact(models.get(i), Defacto.TIME_DISTRIBUTION_ONLY.NO).getDeFactoScore().toString() +
+                            ";" + models.get(i).getName() +
+                            ";" + models.get(i).getSubjectLabel("en") +
+                            ";" + models.get(i).getPredicate().getLocalName() +
+                            ";" + models.get(i).getObjectLabel("en"));
 
+                    //compute the scores for aux models
+                    for ( int m = 0; m < modelsRandom.size() ; m++ ) {
 
-                //Collections.shuffle(models, new Random(100));
+                        DefactoModel tempModel = models.get(i);
+                        tempModel.setName("temp" + m);
+                        tempModel.setSubject(modelsRandom.get(m).getSubject());
+                        //tempModel.setProperty(modelsRandom.get(m).getPredicate());
+                        //tempModel.setObject(modelsRandom.get(m).getObject());
 
+                        //compute the score for main model
+                        LOGGER.info(
+                                Defacto.checkFact(tempModel, Defacto.TIME_DISTRIBUTION_ONLY.NO).getDeFactoScore().toString() +
+                                        ";" + tempModel.getName() +
+                                        ";" + tempModel.getSubjectLabel("en") +
+                                        ";" + tempModel.getPredicate().getLocalName() +
+                                        ";" + tempModel.getObjectLabel("en"));
+                    }
 
+                    //clear the selected files
+                    modelsRandom.clear();
+                    selectedFiles.clear();
             }
 
 
-
         }
-
-
-
-
+        
+        //Collections.shuffle(models, new Random(100));
 
         LOGGER.info("Done!");
 
@@ -100,35 +127,50 @@ public class RubbishEvaluation {
       * @param current
      * @return
      */
-    private static String getRandomProperty(String[] folders, String current){
+    private static String getRandomProperty(ArrayList<String> folders, String current){
         String x = current;
         int randomM = 0;
         while(x.equals(current)){
             Random rand = new Random();
-            randomM = rand.nextInt(folders.length-1);
-            x = folders[randomM];
+            randomM = rand.nextInt(folders.size()-1);
+            x = folders.get(randomM);
         }
         return x;
     }
 
-    private static ArrayList<Integer> getNRandomModelIndexes(int n, int current, int size){
+    /***
+     * get randomly n files inside a folder
+     * @param n
+     * @param folder
+     * @return the selected files
+     */
+    private static ArrayList<File> getNRandomFiles(int n, String folder){
 
         Random rand = new Random();
-        int aux, randomM;
-        ArrayList<Integer> models = new ArrayList(n);
-        size=-1; aux=0;
-        while (aux<n){
-            randomM = rand.nextInt(size);
-            if ((randomM != current) && (!models.contains(randomM))){
-                aux++;
-                models.add(randomM);
+        int size, aux, randomM;
+        ArrayList<File> selected = new ArrayList(n);
+        File[] files;
+
+        try{
+            aux = 0;
+            File selectedFolder = new File(folder);
+
+            files = selectedFolder.listFiles();
+            size = files.length;
+
+            while (aux<n){
+                randomM = rand.nextInt(size);
+                if (!selected.contains(files[randomM])){
+                    aux++;
+                    selected.add(files[randomM]);
+                }
             }
+
+        }catch (Exception e){
+            LOGGER.error(e.toString());
         }
-
-        return models;
+        return selected;
     }
-
-
 
 
 }
