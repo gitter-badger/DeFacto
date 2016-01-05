@@ -55,7 +55,7 @@ public class Defacto {
     
     private static final Logger LOGGER = LoggerFactory.getLogger(Defacto.class);
     public static org.apache.log4j.Logger LOGDEV    = org.apache.log4j.Logger.getLogger("developer");
-    private static final boolean searchCounterargument = true;
+    private static final boolean searchCounterargument = false;
     private static boolean foundCounterargument = true;
     
     /**

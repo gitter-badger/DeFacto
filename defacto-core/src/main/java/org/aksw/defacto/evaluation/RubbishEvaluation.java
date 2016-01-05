@@ -6,11 +6,14 @@ package org.aksw.defacto.evaluation;
 
 import org.aksw.defacto.Defacto;
 import org.aksw.defacto.model.DefactoModel;
+import org.aksw.defacto.model.PropertyConfiguration;
+import org.aksw.defacto.model.PropertyConfigurationSingleton;
 import org.aksw.defacto.reader.DefactoModelReader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
+import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -22,8 +25,15 @@ import java.util.Random;
 public class RubbishEvaluation {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(RubbishEvaluation.class);
+    private static String getWhichPart = "";
+    private static PrintWriter writer;
 
     public static void main(String[] args) throws Exception {
+
+        Defacto.init();
+
+        writer = new PrintWriter("rubbish.txt", "UTF-8");
+        writer.println("score; model; subject; predicate; object; type");
 
         LOGGER.info("Starting the process");
 
@@ -42,19 +52,17 @@ public class RubbishEvaluation {
 
         File files = new File(testDirectory + "correct/");
         //getting all folders (properties)
-        ArrayList<String> propertyFolders = new ArrayList<>();
-        for(String propertyFolder : files.list()){
-            File temp = new File(propertyFolder);
-            if (temp.isDirectory()){
-                propertyFolders.add(propertyFolder);}
+        ArrayList<File> folders = new ArrayList<>();
+        for(File f : files.listFiles()){
+            if (f.isDirectory()){
+                folders.add(f);}
         }
 
         //start the process for each property (folder)
-        for(String propertyFolder : propertyFolders){
-            File currentFolder = new File(propertyFolder);
+        for(File currentFolder : folders){
 
                 sizePropertyFolder = currentFolder.listFiles().length;
-                LOGGER.info("Folder: " + propertyFolder + " contains " + sizePropertyFolder + " models (files)");
+                LOGGER.info("Folder: " + currentFolder.getName() + " contains " + sizePropertyFolder + " models (files)");
 
                 //add all the models which presents functional property then we can deal with exclusions
                 models.addAll(DefactoModelReader.readModels(currentFolder.getAbsolutePath(), true, languages));
@@ -63,7 +71,7 @@ public class RubbishEvaluation {
                 for (int i=0; i<models.size(); i++){
 
                     //this folder will be used to collect new (random) resources
-                    String randomFolder = getRandomProperty(propertyFolders, currentFolder.getName());
+                    File randomFolder = getRandomProperty(folders, currentFolder);
 
                     //get inside the selected folder, N models
                     ArrayList<File> selectedFiles = getNRandomFiles(nrModelsToCompare, randomFolder);
@@ -73,31 +81,42 @@ public class RubbishEvaluation {
                         modelsRandom.add(DefactoModelReader.readModel(selectedFiles.get(j).getAbsolutePath()));
                     }
 
+                    LOGGER.info("original model proccessed: " + models.get(i).getName());
                     //compute the score for main model
-                    LOGGER.info(
-                            Defacto.checkFact(models.get(i), Defacto.TIME_DISTRIBUTION_ONLY.NO).getDeFactoScore().toString() +
+                    writer.println(Defacto.checkFact(models.get(i), Defacto.TIME_DISTRIBUTION_ONLY.NO).getDeFactoScore().toString() +
                             ";" + models.get(i).getName() +
                             ";" + models.get(i).getSubjectLabel("en") +
                             ";" + models.get(i).getPredicate().getLocalName() +
-                            ";" + models.get(i).getObjectLabel("en"));
+                            ";" + models.get(i).getObjectLabel("en") +
+                            ";" + "original");
 
                     //compute the scores for aux models
                     for ( int m = 0; m < modelsRandom.size() ; m++ ) {
 
                         DefactoModel tempModel = models.get(i);
                         tempModel.setName("temp" + m);
-                        tempModel.setSubject(modelsRandom.get(m).getSubject());
-                        //tempModel.setProperty(modelsRandom.get(m).getPredicate());
-                        //tempModel.setObject(modelsRandom.get(m).getObject());
 
+                        if (getWhichPart.equals("S")){
+                            tempModel.setSubject(modelsRandom.get(m).getSubject());
+                        }else if (getWhichPart.equals("O")){
+                            tempModel.setSubject(modelsRandom.get(m).getObject());
+                        }else{
+                            throw new Exception("It should not happens :/ getWhichPart = " + getWhichPart);
+                        }
+
+                        LOGGER.info("changed model proccessed: " + tempModel.getName());
                         //compute the score for main model
-                        LOGGER.info(
+                        writer.println(
                                 Defacto.checkFact(tempModel, Defacto.TIME_DISTRIBUTION_ONLY.NO).getDeFactoScore().toString() +
                                         ";" + tempModel.getName() +
                                         ";" + tempModel.getSubjectLabel("en") +
                                         ";" + tempModel.getPredicate().getLocalName() +
-                                        ";" + tempModel.getObjectLabel("en"));
+                                        ";" + tempModel.getObjectLabel("en") +
+                                        ";" + "changed");
+
                     }
+
+                    writer.flush();
 
                     //clear the selected files
                     modelsRandom.clear();
@@ -106,9 +125,10 @@ public class RubbishEvaluation {
 
 
         }
-        
+
         //Collections.shuffle(models, new Random(100));
 
+        writer.close();
         LOGGER.info("Done!");
 
     }
@@ -123,28 +143,63 @@ public class RubbishEvaluation {
     }
 
     /***
-     * returns a random folder (property) of FactBench to be used as source to the new model generation process
+     * returns a random folder (property) of FactBench to be used as source to the new model generation process based on the structure of the provided model
       * @param current
      * @return
      */
-    private static String getRandomProperty(ArrayList<String> folders, String current){
-        String x = current;
-        int randomM = 0;
-        while(x.equals(current)){
-            Random rand = new Random();
-            randomM = rand.nextInt(folders.size()-1);
-            x = folders.get(randomM);
+    private static File getRandomProperty(ArrayList<File> folders, File current) throws Exception{
+        File x = current;
+        int randomM;
+        boolean allowed = false;
+        getWhichPart = "";
+        int controller = 1;
+
+        if (folders.size() > 1) {
+            while ((x.equals(current)) && controller < folders.size()) {
+
+                controller++;
+                Random rand = new Random();
+                randomM = rand.nextInt(folders.size() - 1);
+                x = folders.get(randomM);
+                //check whether current and chosen share the same configuration
+                if (!PropertyConfigurationSingleton.getInstance().getConfigurations().containsKey(x.getName()))
+                    throw new Exception("Configuration has not been found -> " + x.getName());
+
+                if (!PropertyConfigurationSingleton.getInstance().getConfigurations().containsKey(current.getName()))
+                    throw new Exception("Configuration has not been found -> " + current.getName());
+
+                if (!current.getName().equals(x.getName())) {
+
+                    PropertyConfiguration cCurrent =
+                            PropertyConfigurationSingleton.getInstance().getConfigurations().get(current.getName());
+                    PropertyConfiguration cRandom =
+                            PropertyConfigurationSingleton.getInstance().getConfigurations().get(x.getName());
+
+                    //checking constraints
+                    if (cCurrent.getSubjectClass().equals(cRandom.getSubjectClass())) {
+                        allowed = true;
+                        getWhichPart = "S";
+                    } else if (cCurrent.getSubjectClass().equals(cRandom.getObjectClass())) {
+                        allowed = true;
+                        getWhichPart = "O";
+                    }
+                    if (!allowed) {
+                        x = current;
+                    }
+                }
+            }
         }
+
         return x;
     }
 
     /***
      * get randomly n files inside a folder
      * @param n
-     * @param folder
+     * @param selectedFolder
      * @return the selected files
      */
-    private static ArrayList<File> getNRandomFiles(int n, String folder){
+    private static ArrayList<File> getNRandomFiles(int n, File selectedFolder){
 
         Random rand = new Random();
         int size, aux, randomM;
@@ -153,7 +208,6 @@ public class RubbishEvaluation {
 
         try{
             aux = 0;
-            File selectedFolder = new File(folder);
 
             files = selectedFolder.listFiles();
             size = files.length;
@@ -171,6 +225,8 @@ public class RubbishEvaluation {
         }
         return selected;
     }
+
+
 
 
 }
