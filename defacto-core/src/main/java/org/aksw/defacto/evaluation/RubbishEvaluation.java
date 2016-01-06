@@ -56,14 +56,17 @@ public class RubbishEvaluation {
         for(File f : files.listFiles()){
             //this test must be performed only for FP
             if (f.isDirectory() && isFunctional(f.getName())){
-                folders.add(f);}
+                folders.add(f);
+                writer.println("this folder has been selected: " + f.getName());
+            }
         }
-
+        writer.println("***************************************************************************************");
+        writer.flush();
         //start the process for each property (folder)
         for(File currentFolder : folders){
 
                 sizePropertyFolder = currentFolder.listFiles().length;
-                LOGGER.info("Folder: " + currentFolder.getName() + " contains " + sizePropertyFolder + " models (files)");
+                writer.println("Folder: '" + currentFolder.getName() + "' contains " + sizePropertyFolder + " models (files)");
 
                 //add all the models which presents functional property then we can deal with exclusions
                 models.addAll(DefactoModelReader.readModels(currentFolder.getAbsolutePath(), true, languages));
@@ -82,7 +85,7 @@ public class RubbishEvaluation {
                         modelsRandom.add(DefactoModelReader.readModel(selectedFiles.get(j).getAbsolutePath()));
                     }
 
-                    LOGGER.info("original model proccessed: " + models.get(i).getName());
+                    LOGGER.info("original model processed: " + models.get(i).getName());
                     //compute the score for main model
                     writer.println(Defacto.checkFact(models.get(i), Defacto.TIME_DISTRIBUTION_ONLY.NO).getDeFactoScore().toString() +
                             ";" + models.get(i).getName() +
@@ -122,9 +125,13 @@ public class RubbishEvaluation {
                     //clear the selected files
                     modelsRandom.clear();
                     selectedFiles.clear();
+                    writer.println("fact " + models.get(i).getName() + " has been processed");
+                    writer.flush();
+
             }
 
-
+        writer.println("folder " + currentFolder.getName() + " has been processed");
+        writer.flush();
         }
 
         //Collections.shuffle(models, new Random(100));
@@ -157,7 +164,6 @@ public class RubbishEvaluation {
         boolean allowed = false;
         getWhichPart = "";
         int controller = 1;
-        boolean makesSense = false;
 
         if (folders.size() > 1) {
             while ((x.equals(current)) && controller < folders.size()) {

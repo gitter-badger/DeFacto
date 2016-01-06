@@ -29,8 +29,8 @@ public class BoaPatternSearcher {
     private static HttpSolrServer enIndex;
     private static HttpSolrServer deIndex;
     private static HttpSolrServer frIndex;
-    private Logger logger = Logger.getLogger(BoaPatternSearcher.class);
-    private Logger LOGDEV = Logger.getLogger("developer");
+    private static Logger logger = Logger.getLogger(BoaPatternSearcher.class);
+    private static Logger LOGDEV = Logger.getLogger("developer");
 	private Map<String,QueryResponse> queryCache = new HashMap<>();
 
     /*
@@ -297,7 +297,7 @@ public class BoaPatternSearcher {
 
         }
         catch (Exception e){
-            System.out.println("Could not execute query: " + e);
+            logger.error("Could not execute query: " + e);
             e.printStackTrace();
         }
 
@@ -404,27 +404,16 @@ public class BoaPatternSearcher {
     
     public static void main(String[] args) {
 
-
-
     	Defacto.init();
         queryPatterns("http://dbpedia.org/ontology/award");
-        System.out.println("--------------");
         queryPatterns("http://dbpedia.org/ontology/birthPlace");
-        System.out.println("--------------");
         queryPatterns("http://dbpedia.org/ontology/deathPlace");
-        System.out.println("--------------");
         queryPatterns("http://dbpedia.org/ontology/foundationPlace");
-        System.out.println("--------------");
         queryPatterns("http://dbpedia.org/ontology/leaderName");
-        System.out.println("--------------");
         queryPatterns("http://dbpedia.org/ontology/team");
-        System.out.println("--------------");
         queryPatterns("http://dbpedia.org/ontology/author");
-        System.out.println("--------------");
         queryPatterns("http://dbpedia.org/ontology/spouse");
-        System.out.println("--------------");
         queryPatterns("http://dbpedia.org/ontology/starring");
-        System.out.println("--------------");
         queryPatterns("http://dbpedia.org/ontology/subsidiary");
     }
 
@@ -433,8 +422,6 @@ public class BoaPatternSearcher {
 	 */
 	private static void queryPatterns(String uri) {
 
-
-		
 		int nr = 50;
 		BoaPatternSearcher bps = new BoaPatternSearcher();
 		List<Pattern> sub = new ArrayList<>();
@@ -442,13 +429,11 @@ public class BoaPatternSearcher {
        // sub.addAll(bps.getNaturalLanguageRepresentations(uri, nr, "de"));
         //sub.addAll(bps.getNaturalLanguageRepresentations(uri, nr,  "fr"));
         
-        System.out.println(uri);
+        logger.debug(uri);
         Iterator<Pattern> iterator = sub.iterator();
         while ( iterator.hasNext()) {
 			Pattern pattern = iterator.next();
-			
-            System.out.println(pattern.naturalLanguageRepresentation + " --> " + pattern.normalize());
+            logger.info(pattern.naturalLanguageRepresentation + " --> " + pattern.normalize());
         }
-        System.out.println();
 	}
 }

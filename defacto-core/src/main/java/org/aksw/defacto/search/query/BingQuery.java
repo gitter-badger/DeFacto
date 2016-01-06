@@ -26,8 +26,6 @@ public class BingQuery implements Query {
     @Override
     public String generateQuery(MetaQuery query) {
 
-        System.out.println("generateQuery()");
-
         String subject  = query.getSubjectLabel().replace("&", "and");
         String property = normalizePredicate(query.getPropertyLabel().trim());
         String object   = query.getObjectLabel().replace("&", "and");

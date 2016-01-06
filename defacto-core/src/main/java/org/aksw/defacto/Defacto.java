@@ -275,7 +275,7 @@ public class Defacto {
             
             // we want to print the score of the classifier 
             if ( !Defacto.DEFACTO_CONFIG.getBooleanSetting("settings", "TRAINING_MODE") ) 
-                System.out.println("Defacto: " + new DecimalFormat("0.00").format(evidence.getDeFactoScore()) + " % that this fact is true! Actual: " + model.isCorrect() +"\n");
+                LOGGER.info("Defacto: " + new DecimalFormat("0.00").format(evidence.getDeFactoScore()) + " % that this fact is true! Actual: " + model.isCorrect() +"\n");
 
             // rewrite the fact training file after every proof
             if ( DEFACTO_CONFIG.getBooleanSetting("fact", "OVERWRITE_FACT_TRAINING_FILE") ) 
@@ -414,7 +414,7 @@ public class Defacto {
     		min = Math.min(min, j);
     	}
     	
-    	System.out.println("MAX: " + max);
-    	System.out.println("MIN: " + min);
+    	LOGGER.debug("MAX: " + max);
+        LOGGER.debug("MIN: " + min);
 	}
 }
