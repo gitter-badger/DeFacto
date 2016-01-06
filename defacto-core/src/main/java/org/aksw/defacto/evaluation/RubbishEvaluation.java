@@ -26,6 +26,7 @@ public class RubbishEvaluation {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(RubbishEvaluation.class);
     private static String getWhichPart = "";
+    private static boolean shouldLookSubject;
     private static PrintWriter writer;
 
     public static void main(String[] args) throws Exception {
@@ -89,8 +90,10 @@ public class RubbishEvaluation {
                     //compute the score for main model
                     writer.println(Defacto.checkFact(models.get(i), Defacto.TIME_DISTRIBUTION_ONLY.NO).getDeFactoScore().toString() +
                             ";" + models.get(i).getName() +
+                            ";" + models.get(i).getSubjectUri() +
                             ";" + models.get(i).getSubjectLabel("en") +
                             ";" + models.get(i).getPredicate().getLocalName() +
+                            ";" + models.get(i).getObjectUri() +
                             ";" + models.get(i).getObjectLabel("en") +
                             ";" + "original");
 
@@ -100,12 +103,16 @@ public class RubbishEvaluation {
                         DefactoModel tempModel = models.get(i);
                         tempModel.setName("temp" + m);
 
-                        if (getWhichPart.equals("S")){
-                            tempModel.setSubject(modelsRandom.get(m).getSubject());
-                        }else if (getWhichPart.equals("O")){
+                        if ((getWhichPart.equals("S")) && shouldLookSubject){
+                            tempModel.setSubject(modelsRandom.get(m).getSubject());}
+                        else if ((getWhichPart.equals("S")) && !shouldLookSubject){
+                                tempModel.setObject(modelsRandom.get(m).getSubject());
+                        }else if (getWhichPart.equals("O") && shouldLookSubject){
                             tempModel.setSubject(modelsRandom.get(m).getObject());
+                        }else if (getWhichPart.equals("O") && !shouldLookSubject){
+                            tempModel.setObject(modelsRandom.get(m).getObject());
                         }else{
-                            throw new Exception("It should not happens :/ getWhichPart = " + getWhichPart);
+                            throw new Exception("It should not happen ever :/ getWhichPart = " + getWhichPart);
                         }
 
                         LOGGER.info("changed model proccessed: " + tempModel.getName());
@@ -113,14 +120,14 @@ public class RubbishEvaluation {
                         writer.println(
                                 Defacto.checkFact(tempModel, Defacto.TIME_DISTRIBUTION_ONLY.NO).getDeFactoScore().toString() +
                                         ";" + tempModel.getName() +
+                                        ";" + tempModel.getSubjectUri() +
                                         ";" + tempModel.getSubjectLabel("en") +
                                         ";" + tempModel.getPredicate().getLocalName() +
+                                        ";" + tempModel.getObjectUri() +
                                         ";" + tempModel.getObjectLabel("en") +
-                                        ";" + "changed");
-
+                                        ";" + "original");
+                        writer.flush();
                     }
-
-                    writer.flush();
 
                     //clear the selected files
                     modelsRandom.clear();
@@ -194,6 +201,9 @@ public class RubbishEvaluation {
                             allowed = true;
                             getWhichPart = "O";
                         }
+
+                        shouldLookSubject = cCurrent.getResourceToBeChangedForRubbish().equals("S");
+
                         if (!allowed) {
                             x = current;
                         }
