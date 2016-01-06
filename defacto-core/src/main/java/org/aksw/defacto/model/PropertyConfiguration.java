@@ -9,12 +9,14 @@ public class PropertyConfiguration {
     private String predicateUri;
     private String objectClass;
     private boolean isFunctional;
+    private String resourceToBeChangedForRubbish;
 
-    public PropertyConfiguration(String predicate, String sClass, String oClass, boolean functional){
+    public PropertyConfiguration(String predicate, String sClass, String oClass, boolean functional, String resourceToBeChangedForRubbish){
         this.subjectClass = sClass;
         this.predicateUri = predicate;
         this.objectClass = oClass;
         this.isFunctional = functional;
+        this.resourceToBeChangedForRubbish = resourceToBeChangedForRubbish;
     }
 
     public String getSubjectClass(){
@@ -31,5 +33,9 @@ public class PropertyConfiguration {
 
     public boolean isFunctionalProperty() {
         return this.isFunctional;
+    }
+
+    public String getResourceToBeChangedForRubbish(){
+        return this.resourceToBeChangedForRubbish;
     }
 }
