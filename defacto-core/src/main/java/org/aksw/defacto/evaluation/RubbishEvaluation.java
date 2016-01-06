@@ -54,7 +54,8 @@ public class RubbishEvaluation {
         //getting all folders (properties)
         ArrayList<File> folders = new ArrayList<>();
         for(File f : files.listFiles()){
-            if (f.isDirectory()){
+            //this test must be performed only for FP
+            if (f.isDirectory() && isFunctional(f.getName())){
                 folders.add(f);}
         }
 
@@ -71,7 +72,7 @@ public class RubbishEvaluation {
                 for (int i=0; i<models.size(); i++){
 
                     //this folder will be used to collect new (random) resources
-                    File randomFolder = getRandomProperty(folders, currentFolder);
+                    File randomFolder = getRandomProperty(folders, currentFolder, true);
 
                     //get inside the selected folder, N models
                     ArrayList<File> selectedFiles = getNRandomFiles(nrModelsToCompare, randomFolder);
@@ -133,6 +134,9 @@ public class RubbishEvaluation {
 
     }
 
+    private static boolean isFunctional(String propertyName) {
+        return PropertyConfigurationSingleton.getInstance().getConfigurations().get(propertyName).isFunctionalProperty();
+    }
 
     private static ArrayList<DefactoModel> getRandomModels(){
 
@@ -147,12 +151,13 @@ public class RubbishEvaluation {
       * @param current
      * @return
      */
-    private static File getRandomProperty(ArrayList<File> folders, File current) throws Exception{
+    private static File getRandomProperty(ArrayList<File> folders, File current, boolean onlyFuncional) throws Exception{
         File x = current;
         int randomM;
         boolean allowed = false;
         getWhichPart = "";
         int controller = 1;
+        boolean makesSense = false;
 
         if (folders.size() > 1) {
             while ((x.equals(current)) && controller < folders.size()) {
@@ -169,24 +174,28 @@ public class RubbishEvaluation {
                     throw new Exception("Configuration has not been found -> " + current.getName());
 
                 if (!current.getName().equals(x.getName())) {
+                    if (onlyFuncional && isFunctional(x.getName())){
+                        PropertyConfiguration cCurrent =
+                                PropertyConfigurationSingleton.getInstance().getConfigurations().get(current.getName());
+                        PropertyConfiguration cRandom =
+                                PropertyConfigurationSingleton.getInstance().getConfigurations().get(x.getName());
 
-                    PropertyConfiguration cCurrent =
-                            PropertyConfigurationSingleton.getInstance().getConfigurations().get(current.getName());
-                    PropertyConfiguration cRandom =
-                            PropertyConfigurationSingleton.getInstance().getConfigurations().get(x.getName());
-
-                    //checking constraints
-                    if (cCurrent.getSubjectClass().equals(cRandom.getSubjectClass())) {
-                        allowed = true;
-                        getWhichPart = "S";
-                    } else if (cCurrent.getSubjectClass().equals(cRandom.getObjectClass())) {
-                        allowed = true;
-                        getWhichPart = "O";
-                    }
-                    if (!allowed) {
-                        x = current;
+                        //checking constraints
+                        if (cCurrent.getSubjectClass().equals(cRandom.getSubjectClass())) {
+                            allowed = true;
+                            getWhichPart = "S";
+                        } else if (cCurrent.getSubjectClass().equals(cRandom.getObjectClass())) {
+                            allowed = true;
+                            getWhichPart = "O";
+                        }
+                        if (!allowed) {
+                            x = current;
+                        }
                     }
                 }
+            }
+            if (x.equals(current)) {
+                LOGGER.warn("Attention, there is no similar property available. The evaluation is more likely to be senseless to the property " + current.getName());
             }
         }
 

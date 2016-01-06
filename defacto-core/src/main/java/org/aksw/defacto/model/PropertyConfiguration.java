@@ -8,11 +8,13 @@ public class PropertyConfiguration {
     private String subjectClass;
     private String predicateUri;
     private String objectClass;
+    private boolean isFunctional;
 
-    public PropertyConfiguration(String predicate, String sClass, String oClass){
+    public PropertyConfiguration(String predicate, String sClass, String oClass, boolean functional){
         this.subjectClass = sClass;
         this.predicateUri = predicate;
         this.objectClass = oClass;
+        this.isFunctional = functional;
     }
 
     public String getSubjectClass(){
@@ -27,4 +29,7 @@ public class PropertyConfiguration {
         return this.objectClass;
     }
 
+    public boolean isFunctionalProperty() {
+        return this.isFunctional;
+    }
 }
